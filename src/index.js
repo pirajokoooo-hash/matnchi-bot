@@ -41,10 +41,10 @@ async function spellUzbek(env,text){
   }
   const proofreadChunk=async(chunk,index)=>{
     const prompt="Quyidagi matn o‘zbek tilida. Uni adabiy o‘zbek imlosiga to‘liq moslab tekshir. Faqat aniq imlo, grammatik va tinish belgisi xatolarini tuzat. Sinonim ishlatma, gap tuzilishini sababsiz qayta yozma va yangi ibora qo‘shma. Har bir gapning mazmuni va ketma-ketligini saqla. Ism, joy nomi va tarixiy obida nomlarini o‘zgartirma; bosh harfini to‘g‘rila. Kelishik qo‘shimchalarini to‘g‘ri yoz: Jasurga (Jasurqa emas), Xivaga, Toshkentdan. X va H harflarini farqla: Xiva, Xorazm, Xurshid; havo, hunarmand. Ichan qal’a nomini saqla. Fe’lning shaxs-soni va zamonini o‘zgartirma: bordik/bordim, oldi/oldik shakllarini almashtirma. Matnni qisqartirma, gap yoki so‘zlarni tashlab ketma, qayta hikoya qilma, tarjima qilma. Bu uzun matnning "+(index+1)+"/"+chunks.length+"-bo‘lagi. Bo‘lak boshidan yoki oxiridan gapning bir qismi bo‘lishi mumkin: mazmunni o‘zgartirma va bo‘lak oxiriga matnda yo‘q nuqta qo‘shma. Faqat shu bo‘lakning to‘liq tuzatilgan matnini qaytar. Izoh va sarlavha yozma.\\n\\n"+chunk;
-    const r=await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8",{messages:[
+    const r=await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
       {role:"system",content:"You are a careful native Uzbek proofreader. Return the complete corrected text only. Preserve every word's meaning and every sentence. Never summarize, omit, translate, or invent content. Correct spelling, grammar, suffixes, capitalization and punctuation. Keep the original script."},
       {role:"user",content:prompt}
-    ],max_tokens:Math.max(512,Math.min(1024,Math.ceil(chunk.length*1.5))),temperature:0.0});
+    ],max_tokens:Math.max(256,Math.min(512,Math.ceil(chunk.length*1.1))),temperature:0.0});
     let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
     const thinkEnd=out.indexOf("</think>");
     if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
@@ -95,7 +95,7 @@ async function spellOther(env,text){
   let timer;let r;
   try{
     r=await Promise.race([
-      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8",{messages:[
+      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
         {role:"system",content:system},
         {role:"user",content:"Proofread this "+language+" text completely. Fix all language-specific errors, including punctuation and sentence boundaries. Keep the same language and writing system. Do not explain your edits. Return the entire text.\\n\\n"+text}
       ],max_tokens:1024,temperature:0.0}),
