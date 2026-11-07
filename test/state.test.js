@@ -5,6 +5,7 @@ import worker, { UserState } from "../src/index.js";
 function makeEnv() {
   const stores = new Map();
   const calls = [];
+  const aiCalls = [];
   const binding = {
     idFromName(name) { return name; },
     get(id) {
@@ -32,11 +33,17 @@ function makeEnv() {
   };
   return {
     calls,
+    aiCalls,
     env: {
       TELEGRAM_BOT_TOKEN: "test-token",
       WEBHOOK_SECRET: "test-secret",
       USER_STATE_DO: binding,
-      AI: { async run(model) { return model.includes("m2m100") ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." } : { response: "Я хочу изучать английский и улучшать свои навыки." }; } }
+      AI: { async run(model, input) {
+        aiCalls.push({ model, input });
+        return model.includes("m2m100")
+          ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." }
+          : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
+      } }
     }
   };
 }
@@ -68,6 +75,31 @@ test("chosen translation language survives callback and next message", async () 
   const sent = calls.find(x => x.method === "sendMessage");
   assert.ok(sent, "bot should send a translation");
   assert.equal(sent.body.text, "Я хочу изучать английский и улучшать свои навыки.");
+});
+
+test("Uzbek Latin greeting is detected as Uzbek before Arabic translation", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb3",
+      from: { id: 999 },
+      data: "lang:ar",
+      message: { message_id: 7, chat: { id: 999 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 999 },
+      chat: { id: 999 },
+      text: "Assalomu alaykum, yaxshimisiz? Sizga tinchlik va baxt tilayman."
+    }
+  });
+  const qwen = aiCalls.find(x => x.model.includes("qwen"));
+  assert.ok(qwen, "Uzbek text should use the Uzbek-capable translation model");
+  const prompt = qwen.input.messages[1].content;
+  assert.match(prompt, /o‘zbek tilidan arab tiliga/);
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة.");
 });
 
 test("start clears saved user mode", async () => {
