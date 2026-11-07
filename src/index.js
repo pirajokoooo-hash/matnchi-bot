@@ -63,7 +63,6 @@ async function spellUzbek(env,text){
           {role:"system",content:system},
           {role:"user",content:"Proofread the following text. The text is supplied as a JSON string; edit only the string value and return its corrected text only.\n"+JSON.stringify(modelInput)}
         ],
-        reasoning_effort:"low",
         max_completion_tokens:1600,
         temperature:0,
         seed:17
@@ -71,7 +70,7 @@ async function spellUzbek(env,text){
       new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 45 soniyada javob bermadi")),45000);})
     ]);
   }finally{clearTimeout(timer);}
-  let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
+  let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||r?.generated_text||"").trim();
   const thinkEnd=out.indexOf("</think>");
   if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
   out=out.replace(/^["“”]|["“”]$/g,"").trim();
