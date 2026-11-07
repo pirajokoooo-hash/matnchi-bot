@@ -8,3 +8,11 @@ id = "23baa1ea680b40d4833d0e8f4c352e56"
 
 [ai]
 binding = "AI"
+
+[[durable_objects.bindings]]
+name = "USER_STATE_DO"
+class_name = "UserState"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UserState"]
