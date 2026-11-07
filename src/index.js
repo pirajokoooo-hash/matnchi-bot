@@ -29,24 +29,41 @@ async function spellUzbek(env,text){
   if(!env.AI)throw new Error("Imlo tekshirish xizmati ulanmagan");
   const inputCyr=/[\\u0400-\\u04FF]/.test(text);
   const modelInput=inputCyr?text:toStandardUzbek(text);
-  const prompt="Quyidagi matn o‘zbek tilida. Uni adabiy o‘zbek imlosiga to‘liq moslab tekshir. Faqat aniq imlo, grammatik va tinish belgisi xatolarini tuzat. Sinonim ishlatma, gap tuzilishini sababsiz qayta yozma va yangi ibora qo‘shma. Har bir gapning mazmuni va ketma-ketligini saqla. Ism, joy nomi va tarixiy obida nomlarini o‘zgartirma; bosh harfini to‘g‘rila. Kelishik qo‘shimchalarini to‘g‘ri yoz: Jasurga (Jasurqa emas), Xivaga, Toshkentdan. X va H harflarini farqla: Xiva, Xorazm, Xurshid; havo, hunarmand. Ichan qal’a nomini saqla. Fe’lning shaxs-soni va zamonini o‘zgartirma: bordik/bordim, oldi/oldik shakllarini almashtirma. Matnni qisqartirma, gap yoki so‘zlarni tashlab ketma, qayta hikoya qilma, tarjima qilma. Faqat tuzatilgan to‘liq matnni qaytar. Izoh va sarlavha yozma.\\n\\n"+modelInput;
+  // Long texts are split into short word-safe fragments and proofread concurrently.
+  const chunks=[];let rest=modelInput;
+  while(rest.length){
+    if(rest.length<=420){chunks.push(rest);break;}
+    let cut=rest.lastIndexOf(" ",420);
+    if(cut<220)cut=rest.indexOf(" ",420);
+    if(cut<0)cut=rest.length;
+    chunks.push(rest.slice(0,cut).trim());
+    rest=rest.slice(cut).trim();
+  }
+  const proofreadChunk=async(chunk,index)=>{
+    const prompt="Quyidagi matn o‘zbek tilida. Uni adabiy o‘zbek imlosiga to‘liq moslab tekshir. Faqat aniq imlo, grammatik va tinish belgisi xatolarini tuzat. Sinonim ishlatma, gap tuzilishini sababsiz qayta yozma va yangi ibora qo‘shma. Har bir gapning mazmuni va ketma-ketligini saqla. Ism, joy nomi va tarixiy obida nomlarini o‘zgartirma; bosh harfini to‘g‘rila. Kelishik qo‘shimchalarini to‘g‘ri yoz: Jasurga (Jasurqa emas), Xivaga, Toshkentdan. X va H harflarini farqla: Xiva, Xorazm, Xurshid; havo, hunarmand. Ichan qal’a nomini saqla. Fe’lning shaxs-soni va zamonini o‘zgartirma: bordik/bordim, oldi/oldik shakllarini almashtirma. Matnni qisqartirma, gap yoki so‘zlarni tashlab ketma, qayta hikoya qilma, tarjima qilma. Bu uzun matnning "+(index+1)+"/"+chunks.length+"-bo‘lagi. Bo‘lak boshidan yoki oxiridan gapning bir qismi bo‘lishi mumkin: mazmunni o‘zgartirma va bo‘lak oxiriga matnda yo‘q nuqta qo‘shma. Faqat shu bo‘lakning to‘liq tuzatilgan matnini qaytar. Izoh va sarlavha yozma.\\n\\n"+chunk;
+    const r=await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8",{messages:[
+      {role:"system",content:"You are a careful native Uzbek proofreader. Return the complete corrected text only. Preserve every word's meaning and every sentence. Never summarize, omit, translate, or invent content. Correct spelling, grammar, suffixes, capitalization and punctuation. Keep the original script."},
+      {role:"user",content:prompt}
+    ],max_tokens:Math.max(512,Math.min(1024,Math.ceil(chunk.length*1.5))),temperature:0.0});
+    let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
+    const thinkEnd=out.indexOf("</think>");
+    if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
+    out=out.replace(/^["“”]|["“”]$/g,"").trim();
+    out=out.replace(/^\\s*(?:tuzatilgan matn|imlo jihatdan tuzatilgan matn|corrected text)\\s*:?\\s*/i,"");
+    if(!out||out.length<Math.max(8,chunk.length*0.55))throw new Error("Matnning "+(index+1)+"-bo‘lagi to‘liq tekshirilmadi");
+    if(inputCyr&&!/[\\u0400-\\u04FF]/.test(out))throw new Error("Kirill yozuvi saqlanmadi");
+    if(!inputCyr&&/[\\u0400-\\u04FF]/.test(out))throw new Error("Lotin yozuvi saqlanmadi");
+    return out;
+  };
   let timer;
-  let r;
+  let parts;
   try{
-    r=await Promise.race([
-      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8",{messages:[
-        {role:"system",content:"You are a careful native Uzbek proofreader. Return the complete corrected text only. Preserve every sentence and its meaning. Never summarize, omit, translate, or invent content. Correct spelling, grammar, suffixes, capitalization and punctuation. Keep the original script."},
-        {role:"user",content:prompt}
-      ],max_tokens:2048,temperature:0.0}),
+    parts=await Promise.race([
+      Promise.all(chunks.map((chunk,index)=>proofreadChunk(chunk,index))),
       new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 35 soniyada javob bermadi")),35000);})
     ]);
   }finally{clearTimeout(timer);}
-  let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
-  const thinkEnd=out.indexOf("</think>");
-  if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
-  out=out.replace(/^["“”]|["“”]$/g,"").trim();
-  out=out.replace(/^\\s*(?:tuzatilgan matn|imlo jihatdan tuzatilgan matn|corrected text)\\s*:?\\s*/i,"");
-  if(!out)throw new Error("Imlo tekshirish xizmati bo‘sh javob berdi");
+  let out=parts.join(" ").replace(/\\s+/g," ").trim();
   if(out.length<Math.max(8,modelInput.length*0.55))throw new Error("Javob to‘liq emas, matn qisqarib ketdi");
   const inputLast=(modelInput.match(/[\\p{L}]+(?=[^\\p{L}]*$)/u)||[])[0]||"";
   const outputLast=(out.match(/[\\p{L}]+(?=[^\\p{L}]*$)/u)||[])[0]||"";
@@ -57,7 +74,8 @@ async function spellUzbek(env,text){
     if(!/[\\u0400-\\u04FF]/.test(out))throw new Error("Kirill yozuvi saqlanmadi");
   }else{
     if(/[\\u0400-\\u04FF]/.test(out))throw new Error("Lotin yozuvi saqlanmadi");
-    out=fixCommonUzbekLatin(out,modelInput);out=out.replace(/\bJasurqa\b/g,"Jasurga").replace(/\bIçon qal[’'‘]a\b/gi,"Ichan qal’a").replace(/\bIçan qal[’'‘]a\b/gi,"Ichan qal’a");
+    out=fixCommonUzbekLatin(out,modelInput);
+    out=out.replace(/\\bJasurqa\\b/g,"Jasurga").replace(/\\bIçon qal[’'‘]a\\b/gi,"Ichan qal’a").replace(/\\bIçan qal[’'‘]a\\b/gi,"Ichan qal’a");
   }
   return{corrected:out,note:"✅ Imlo tekshirildi."};
 }
