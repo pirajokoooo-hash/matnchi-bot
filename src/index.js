@@ -1,3 +1,5 @@
+import { restoreKnownUzbekNames } from "./uzbek_names.js";
+
 const API = "https://api.telegram.org/bot";
 const ADMIN_ID="8902835474";
 async function recordSubscriber(env,from){if(!from?.id)return;const stub=env.USER_STATE_DO.get(env.USER_STATE_DO.idFromName("__subscribers__"));const r=await stub.fetch("https://state/record",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:String(from.id),first_name:from.first_name||"",last_name:from.last_name||"",username:from.username||"",seen_at:new Date().toISOString()})});if(!r.ok)throw new Error("Obunachi ma’lumotini saqlab bo‘lmadi");}
@@ -23,7 +25,7 @@ async function translateUzbekWithQwen(env,text,target,source){if(!env.AI)throw n
 async function translateWithCloudflareAI(env,text,target){if(!env.AI)return null;const source=detectSource(text);if(source==="uz"||target==="uz")return translateUzbekWithQwen(env,text,target,source);const sl=AI_LANG[source],tl=AI_LANG[target];if(!sl||!tl)throw new Error("Bu til yoʼnalishi hozircha qo‘llab-quvvatlanmaydi");if(sl===tl)return text;const r=await env.AI.run("@cf/meta/m2m100-1.2b",{text,source_lang:sl,target_lang:tl});const out=r?.translated_text;if(!out)throw new Error("Cloudflare AI tarjima javobi bo‘sh");return out;}
 async function translate(env,text,target){try{const ai=await translateWithCloudflareAI(env,text,target);if(ai)return ai;}catch(e){console.error("CLOUDFLARE_AI_FAILED",String(e&&e.message||e));if(detectSource(text)==="uz"||target==="uz")throw new Error("Özbekça tarjima vaqtincha ishlamadi. Xato: "+String(e&&e.message||e).slice(0,100));}const u=new URL("https://translate.googleapis.com/translate_a/single");Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:text}).forEach(([k,v])=>u.searchParams.set(k,v));try{const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});if(r.ok){const d=await r.json();if(Array.isArray(d)&&Array.isArray(d[0])){const out=d[0].filter(x=>x&&x[0]).map(x=>x[0]).join("");if(out)return out;}}}catch(e){console.error("GOOGLE_TRANSLATE_FAILED",String(e&&e.message||e));}return translateFallback(text,target);}
 function isUzbekText(text){
-  if(/\b(jahongir|jaxongir|johongir|xusan|husan|hilola|hilmola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\b/i.test(text))return true;
+  if(/\b(jahongir|jaxongir|johongir|xusan|husan|hilola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\b/i.test(text))return true;
   if(/[ўқғҳ]/i.test(text)||/[öğşç]/i.test(text))return true;
   return /\b(men|sen|biz|siz|bugun|ertaga|dost|do‘st|dostim|do‘stim|bilan|uchun|yaxshi|yomon|kitob|maktab|kutubxona|bordim|boraman|o‘qidim|oqidim|o‘qish|o'qish|o‘qidi|oqidi|oilam|onam|menga|kerak|bo‘ldi|bo'ldi|emas|ham|yerdan|yerda|xalq|tarix|tarixini|kelajak|kelajagini|qura|olmaydi|shahar|viloyat|samarqand|toshkent|toşkent|xiva|xorazm|xurshid|obida|obidalar|registon|buxoro|urgut|shahrisabz)\b/i.test(text)||/[oO][‘’ʻʼ'][gG][‘’ʻʼ']/.test(text);
 }
@@ -56,7 +58,7 @@ function fixKnownUzbekProofreadingErrors(text,original=""){
 }
 function fixUzbekNamesAndHX(text){
  let out=String(text);
- out=out.replace(/\bhilm(?:ö|o)ll?a\b/giu,"Hilmola");
+ 
  const hx=[
   [/\bhato(?=(?:dan|ga|da|ni|ning|lar|lari)?\b)/gi,"xato"],
   [/\bxamma(?=(?:si|ni|ning|ga|da|dan)?\b)/gi,"hamma"],
@@ -79,7 +81,7 @@ function fixUzbekNamesAndHX(text){
  ];
  for(const [re,v] of hx)out=out.replace(re,v);
  out=out.replace(/\b(jaxongir|jahongir|johongir)\b/gi,"Jahongir");
- const names=["xusan","husan","hilmola","hilola","ali","vali","hasan","hasanali","husanboy","xusniddin","sardor","jasur","aziz","aziza","dilshod","dilnoza","madina","malika","shahzod","shohruh","shoxrux","bekzod","behruz","bobur","umar","umida","nigora","nargiza","nilufar","mohira","mohinur","muhammad","abdulloh","abdurahmon","islom","islombek","temur","temurbek","rustam","ravshan","farhod","farxod","farrux","oybek","oysha","zuhra","zaynab","humayra","umayra","hadiya","kumush"];
+ const names=["xusan","husan","hilola","ali","vali","hasan","hasanali","husanboy","xusniddin","sardor","jasur","aziz","aziza","dilshod","dilnoza","madina","malika","shahzod","shohruh","shoxrux","bekzod","behruz","bobur","umar","umida","nigora","nargiza","nilufar","mohira","mohinur","muhammad","abdulloh","abdurahmon","islom","islombek","temur","temurbek","rustam","ravshan","farhod","farxod","farrux","oybek","oysha","zuhra","zaynab","humayra","umayra","hadiya","kumush"];
  const suffix="(?:ning|dan|dagi|gacha|larga|lari|lar|ga|da|ni|i|im|imiz|si|siga|sini)?";
  for(const name of names){
   const re=new RegExp("\\b("+name+")("+suffix+")(?=\\b)","giu");
@@ -193,6 +195,7 @@ async function spellUzbek(env,text){
     out=fixKnownUzbekProofreadingErrors(out,modelInput);
     out=finalUzbekCleanup(out);
     out=fixUzbekNamesAndHX(out);
+    out=restoreKnownUzbekNames(out,modelInput);
     out=out.replace(/\bJasurqa\b/g,"Jasurga").replace(/\bIçon qal[’'‘]a\b/gi,"Ichan qal’a").replace(/\bIçan qal[’'‘]a\b/gi,"Ichan qal’a");
   }
   return{corrected:out,note:"✅ Imlo tekshirildi."};
