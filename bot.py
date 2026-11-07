@@ -45,8 +45,8 @@ def _case_like(source: str, lower: str, upper: str) -> str:
 def latin_to_cyrillic(text: str, new_alphabet: bool = False) -> str:
     """Convert Uzbek Latin text to Cyrillic; optionally accept the 2026 alphabet."""
     apostrophes = re.escape(APOSTROPHES)
-    text = re.sub(r"(?i)o[" + apostrophes + r"]", "Ў", text)
-    text = re.sub(r"(?i)g[" + apostrophes + r"]", "Ғ", text)
+    text = re.sub(r"(?i)o[" + apostrophes + r"]", lambda m: "Ў" if m.group(0)[0].isupper() else "ў", text)
+    text = re.sub(r"(?i)g[" + apostrophes + r"]", lambda m: "Ғ" if m.group(0)[0].isupper() else "ғ", text)
 
     pairs = {
         "sh": "Ш", "ch": "Ч", "yo": "Ё", "yu": "Ю",
