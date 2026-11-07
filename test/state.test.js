@@ -42,7 +42,7 @@ function makeEnv() {
         aiCalls.push({ model, input });
         return model.includes("m2m100")
           ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." }
-          : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
+          : input.messages[1].content.includes("o‘zbek tilidan turk tiliga") ? { response: "Yarın arkadaşım ile şehire gideceğim." } : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
       } }
     }
   };
@@ -100,6 +100,30 @@ test("Uzbek Latin greeting is detected as Uzbek before Arabic translation", asyn
   assert.match(prompt, /o‘zbek tilidan arab tiliga/);
   const sent = calls.filter(x => x.method === "sendMessage").at(-1);
   assert.equal(sent.body.text, "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة.");
+});
+
+test("Turkish translation corrects the observed şehir dative spelling error", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb4",
+      from: { id: 1001 },
+      data: "lang:tr",
+      message: { message_id: 8, chat: { id: 1001 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1001 },
+      chat: { id: 1001 },
+      text: "Ertaga do‘stim bilan shaharga boraman."
+    }
+  });
+  const qwen = aiCalls.find(x => x.model.includes("qwen"));
+  assert.ok(qwen, "Uzbek-to-Turkish should use the Uzbek-capable model");
+  assert.match(qwen.input.messages[0].content, /şehir is şehre, never şehire/);
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "Yarın arkadaşım ile şehre gideceğim.");
 });
 
 test("start clears saved user mode", async () => {
