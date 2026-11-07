@@ -24,6 +24,11 @@ NAME_RULES.unshift(
     canonical: "Jahongir",
     sourceForms: ["jahongir", "jaxongir", "johongir"],
     outputForms: ["jahongir", "jaxongir", "johongir", "jahangir", "jaxon gir"]
+  },
+  {
+    canonical: "Hilola",
+    sourceForms: ["hilola"],
+    outputForms: ["hilola", "hilmola"]
   }
 );
 
