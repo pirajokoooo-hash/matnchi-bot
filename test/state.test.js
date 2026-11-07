@@ -123,7 +123,7 @@ test("Uzbek sentence about mother is detected as Uzbek before Arabic translation
   const qwen = aiCalls.find(x => x.model.includes("qwen"));
   assert.ok(qwen, "Uzbek sentence should use the Uzbek-capable translation model");
   assert.match(qwen.input.messages[1].content, /o‘zbek tilidan arab tiliga/);
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا.");
 });
 
@@ -147,7 +147,7 @@ test("Turkish translation corrects the observed şehir dative spelling error", a
   const qwen = aiCalls.find(x => x.model.includes("qwen"));
   assert.ok(qwen, "Uzbek-to-Turkish should use the Uzbek-capable model");
   assert.match(qwen.input.messages[0].content, /şehir is şehre, never şehire/);
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "Yarın arkadaşım ile şehre gideceğim.");
 });
 
@@ -188,7 +188,7 @@ test("2026 Uzbek alphabet Latin-to-Cyrillic uses Ö Ğ Ş Ç", async () => {
       text: "Özbek Ğalaba Şahar Çiroq"
     }
   });
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "Ўзбек Ғалаба Шаҳар Чироқ");
 });
 
@@ -209,7 +209,7 @@ test("2026 Uzbek alphabet Cyrillic-to-Latin uses Ö Ğ Ş Ç", async () => {
       text: "Ўзбек Ғалаба Шаҳар Чироқ"
     }
   });
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "Özbek Ğalaba Şahar Çiroq");
 });
 
@@ -231,7 +231,7 @@ test("new Uzbek Latin O‘ and tutuq signs transliterate correctly with case pre
       text: "O‘ZBEK TILI — MA’RIFAT VA TA’LIM"
     }
   });
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "ЎЗБЕК ТИЛИ — МАЪРИФАТ ВА ТАЪЛИМ");
 });
 
@@ -252,6 +252,6 @@ test("new Uzbek Latin apostrophe variants and G‘ are handled", async () => {
       text: "O'zbek, G‘alaba, ma’rifat va ta’lim"
     }
   });
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "Ўзбек, Ғалаба, маърифат ва таълим");
 });
