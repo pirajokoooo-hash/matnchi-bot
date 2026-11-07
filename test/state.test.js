@@ -307,3 +307,141 @@ test("Uzbek proofreading rejects duplicated final words instead of sending bad t
   assert.match(sent.body.text, /takrorlangan.*aniqlandi/);
   assert.doesNotMatch(sent.body.text, /Imlo tekşirildi/);
 });
+
+
+test("Latin transliteration handles sh, ch and Uzbek yo‘ as complete sounds", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "tr1", from: { id: 3001 }, data: "translit:new_lc",
+      message: { message_id: 31, chat: { id: 3001 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3001 }, chat: { id: 3001 },
+      text: "shahar chiroq yo‘l yo‘q"
+    }
+  });
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.equal(sent.body.text, "шаҳар чироқ йўл йўқ");
+});
+
+test("English spelling does not get misclassified because the sentence starts with I", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "I want to learn English and improve my skills." };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-en", from: { id: 3101 }, data: "mode:spell",
+      message: { message_id: 32, chat: { id: 3101 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3101 }, chat: { id: 3101 },
+      text: "I want to learn English and improve my skills."
+    }
+  });
+  assert.match(aiCalls[0].input.messages[0].content, /English proofreader/);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /English spelling checked|Inglizcha imlo tekshirildi/);
+});
+
+test("Turkish spelling is detected without confusing it with Uzbek house letters", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "Yarın şehirdeki çocuklar mutlu." };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-tr", from: { id: 3102 }, data: "mode:spell",
+      message: { message_id: 33, chat: { id: 3102 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3102 }, chat: { id: 3102 },
+      text: "yarın şehirdeki çocuklar mutlu"
+    }
+  });
+  assert.match(aiCalls[0].input.messages[0].content, /Turkish proofreader/);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Turkcha imlo tekshirildi/);
+  assert.match(sent.body.text, /Yarın şehirdeki çocuklar mutlu\./);
+});
+
+test("Russian spelling is kept in Russian", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "Сегодня мы поедем в город." };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-ru", from: { id: 3103 }, data: "mode:spell",
+      message: { message_id: 34, chat: { id: 3103 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3103 }, chat: { id: 3103 },
+      text: "сегодня мы поедем в город"
+    }
+  });
+  assert.match(aiCalls[0].input.messages[0].content, /Russian proofreader/);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Ruscha imlo tekshirildi/);
+  assert.match(sent.body.text, /Сегодня мы поедем в город\./);
+});
+
+test("Uzbek Cyrillic spelling is not mistaken for Russian", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "Бугун мен Тошкентга бордим." };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-uz-cy", from: { id: 3104 }, data: "mode:spell",
+      message: { message_id: 35, chat: { id: 3104 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3104 }, chat: { id: 3104 },
+      text: "бугун мен тошкентга бордим"
+    }
+  });
+  assert.match(aiCalls[0].input.messages[0].content, /expert Uzbek-language proofreader/);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Бугун мен Тошкентга бордим\./);
+  assert.match(sent.body.text, /Imlo tekshirildi/);
+});
+
+test("Arabic spelling uses Arabic proofreader and preserves Arabic script", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "السلام عليكم، كيف حالكم؟" };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-ar", from: { id: 3105 }, data: "mode:spell",
+      message: { message_id: 36, chat: { id: 3105 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3105 }, chat: { id: 3105 },
+      text: "السلام عليكم كيف حالكم"
+    }
+  });
+  assert.match(aiCalls[0].input.messages[0].content, /Arabic proofreader/);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Arabcha imlo tekshirildi/);
+  assert.match(sent.body.text, /السلام عليكم، كيف حالكم؟/);
+});
