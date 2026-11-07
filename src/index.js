@@ -55,6 +55,7 @@ function fixKnownUzbekProofreadingErrors(text,original=""){
 }
 function fixUzbekNamesAndHX(text){
  let out=String(text);
+ out=out.replace(/\bxamma\b/gi,"hamma").replace(/\bxayot\b/gi,"hayot").replace(/\bxurmat\b/gi,"hurmat");
  const hx=[
   [/\\bhato(?=(?:dan|ga|da|ni|ning|lar|lari)?\\b)/gi,"xato"],
   [/\\bxamma(?=(?:si|ni|ning|ga|da|dan)?\\b)/gi,"hamma"],
