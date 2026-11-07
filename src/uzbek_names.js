@@ -14,12 +14,15 @@ const NAME_RULES = [
 ];
 
 function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\\]\\]/g, "\\return value.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");");
+  return value.split("").map(ch => "\\.^$|?*+()[]{}".includes(ch) ? "\\" + ch : ch).join("");
+}
+
+function makeAlternatives(forms) {
+  return forms.map(form => form.trim().split(" ").map(escapeRegex).join("\\s+")).join("|");
 }
 
 function hasName(text, forms) {
-  const alternatives = forms.map(form => form.trim().split(/\\s+/).map(escapeRegex).join("\\\\s+")).join("|");
-  const pattern = new RegExp("(^|[^\\p{L}])(?:" + alternatives + ")(?=$|[^\\p{L}])", "iu");
+  const pattern = new RegExp("(^|[^\\p{L}])(?:" + makeAlternatives(forms) + ")(?=$|[^\\p{L}])", "iu");
   return pattern.test(String(text));
 }
 
@@ -28,8 +31,7 @@ export function restoreKnownUzbekNames(corrected, original) {
   const source = String(original);
   for (const rule of NAME_RULES) {
     if (!hasName(source, rule.sourceForms)) continue;
-    const alternatives = rule.outputForms.map(form => form.trim().split(/\\s+/).map(escapeRegex).join("\\\\s+")).join("|");
-    const pattern = new RegExp("(^|[^\\p{L}])(?:" + alternatives + ")(?=$|[^\\p{L}])", "giu");
+    const pattern = new RegExp("(^|[^\\p{L}])(?:" + makeAlternatives(rule.outputForms) + ")(?=$|[^\\p{L}])", "giu");
     result = result.replace(pattern, (_match, prefix) => prefix + rule.canonical);
   }
   return result;
