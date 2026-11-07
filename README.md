@@ -5,7 +5,7 @@ Telegram bot Cloudflare Workers webhook orqali ishlaydi.
 ## Ishga tushirish uchun kerakli sozlamalar
 
 Cloudflare Worker bindings:
-- `USER_STATE` — KV namespace
+- `USER_STATE_DO` — foydalanuvchi holatini saqlovchi Durable Object
 - `AI` — Cloudflare Workers AI
 
 Cloudflare secrets:
@@ -29,8 +29,6 @@ Webhookni birinchi marta ulash yoki qayta ulash uchun Worker manzilidagi `/regis
 
 ## Bot xizmatlari
 
-- Tarjima: Cloudflare Workers AI, Google Translate va MyMemory zaxira yo‘llari.
-- Lotin/kirill: Worker ichidagi o‘zgartirish funksiyalari.
-- Imlo: Yandex Speller (ruscha va inglizcha).
-
-Eslatma: bepul xizmatlar kvota va so‘rov cheklovlariga ega. Tarjima sifati va mavjudligi alohida amaliy sinovdan o‘tkazilishi kerak.
+- Tarjima: Cloudflare Workers AI; zarur holatda Google Translate va MyMemory zaxira yo‘llari.
+- Lotin ↔ Kirill: Worker ichidagi o‘zgartirish funksiyalari.
+- Imlo tekshirish: o‘zbekcha, ruscha, inglizcha, turkcha va arabcha matnlar.
