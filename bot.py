@@ -34,46 +34,75 @@ BACK_KEYBOARD = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="⬅️ Menyuga qaytish", callback_data="home")]
 ])
 
-def latin_to_cyrillic(text: str) -> str:
-    pairs = {"sh":"ш", "ch":"ч", "yo":"ё", "yu":"ю", "ya":"я", "ye":"е", "ts":"ц"}
-    singles = {"a":"а","b":"б","d":"д","e":"е","f":"ф","g":"г","h":"ҳ",
-               "i":"и","j":"ж","k":"к","l":"л","m":"м","n":"н","o":"о",
-               "p":"п","q":"қ","r":"р","s":"с","t":"т","u":"у","v":"в",
-               "x":"х","y":"й","z":"з","w":"в","c":"к"}
-    text = re.sub(r"(?i)o[" + re.escape(APOSTROPHES) + r"]", "ў", text)
-    text = re.sub(r"(?i)g[" + re.escape(APOSTROPHES) + r"]", "ғ", text)
-    out, i = [], 0
+def _case_like(source: str, lower: str, upper: str) -> str:
+    if source.isupper():
+        return upper
+    if source[:1].isupper():
+        return upper[:1] + lower[1:]
+    return lower
+
+
+def latin_to_cyrillic(text: str, new_alphabet: bool = False) -> str:
+    """Convert Uzbek Latin text to Cyrillic; optionally accept the 2026 alphabet."""
+    apostrophes = re.escape(APOSTROPHES)
+    text = re.sub(r"(?i)o[" + apostrophes + r"]", "Ў", text)
+    text = re.sub(r"(?i)g[" + apostrophes + r"]", "Ғ", text)
+
+    pairs = {
+        "sh": "Ш", "ch": "Ч", "yo": "Ё", "yu": "Ю",
+        "ya": "Я", "ye": "Е", "ts": "Ц",
+    }
+    singles = {
+        "a":"А","b":"Б","d":"Д","e":"Е","f":"Ф","g":"Г","h":"Ҳ",
+        "i":"И","j":"Ж","k":"К","l":"Л","m":"М","n":"Н","o":"О",
+        "p":"П","q":"Қ","r":"Р","s":"С","t":"Т","u":"У","v":"В",
+        "x":"Х","y":"Й","z":"З","w":"В",
+        "ў":"Ў","ғ":"Ғ","ö":"Ў","ğ":"Ғ","ş":"Ш","ç":"Ч",
+    }
+    out = []
+    i = 0
     while i < len(text):
         ch = text[i]
         pair = text[i:i+2].lower()
         if pair in pairs:
-            value = pairs[pair]
-            out.append(value.upper() if ch.isupper() else value)
+            out.append(_case_like(text[i:i+2], pairs[pair].lower(), pairs[pair]))
             i += 2
             continue
         low = ch.lower()
         if low in singles:
             value = singles[low]
-            out.append(value.upper() if ch.isupper() else value)
+            out.append(value if ch.isupper() else value.lower())
         elif ch in APOSTROPHES:
-            out.append("ъ")
+            out.append("Ъ" if ch.isupper() else "ъ")
         else:
             out.append(ch)
         i += 1
     return "".join(out)
 
-def cyrillic_to_latin(text: str) -> str:
-    mapping = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"yo","ж":"j",
-               "з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o",
-               "п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"x","ц":"ts",
-               "ч":"ch","ш":"sh","щ":"shch","ъ":"'","ь":"","э":"e","ю":"yu","я":"ya",
-               "ў":"o‘","ғ":"g‘","қ":"q","ҳ":"h"}
+
+def cyrillic_to_latin(text: str, new_alphabet: bool = False) -> str:
+    mapping = {
+        "а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"yo","ж":"j",
+        "з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o",
+        "п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"x","ц":"ts",
+        "ч":"ç" if new_alphabet else "ch",
+        "ш":"ş" if new_alphabet else "sh",
+        "щ":"shch","ъ":"'","ь":"","э":"e","ю":"yu","я":"ya",
+        "ў":"ö" if new_alphabet else "o‘",
+        "ғ":"ğ" if new_alphabet else "g‘",
+        "қ":"q","ҳ":"h",
+    }
     out = []
     for ch in text:
         low = ch.lower()
         if low in mapping:
             value = mapping[low]
-            out.append(value.upper() if ch.isupper() and value else value)
+            if ch.isupper() and value:
+                if len(value) > 1 and value.isalpha():
+                    value = value[0].upper() + value[1:]
+                else:
+                    value = value.upper()
+            out.append(value)
         else:
             out.append(ch)
     return "".join(out)
@@ -142,8 +171,10 @@ async def choose_language(call: CallbackQuery):
 @dp.callback_query(F.data == "mode:translit")
 async def choose_translit(call: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Lotin → Кирилл", callback_data="translit:lc")],
-        [InlineKeyboardButton(text="Кирилл → Lotin", callback_data="translit:cl")],
+        [InlineKeyboardButton(text="Eski lotin → Кирилл", callback_data="translit:old_lc")],
+        [InlineKeyboardButton(text="Yangi lotin → Кирилл", callback_data="translit:new_lc")],
+        [InlineKeyboardButton(text="Кирилл → Eski lotin", callback_data="translit:old_cl")],
+        [InlineKeyboardButton(text="Кирилл → Yangi lotin", callback_data="translit:new_cl")],
         [InlineKeyboardButton(text="⬅️ Menyuga qaytish", callback_data="home")]])
     await call.message.edit_text("Qaysi yo‘nalishda o‘zgartiray?", reply_markup=keyboard)
     await call.answer()
@@ -179,10 +210,12 @@ async def process_text(message: Message):
         if mode == "translate_text":
             result = await translate_text(text, user_languages.get(uid, "uz"))
             title = "🌐 Tarjima natijasi:"
-        elif mode == "lc":
-            result, title = latin_to_cyrillic(text), "🔤 Кирилл yozuvida:"
-        elif mode == "cl":
-            result, title = cyrillic_to_latin(text), "🔤 Lotin yozuvida:"
+        elif mode in ("old_lc", "new_lc"):
+            result = latin_to_cyrillic(text, new_alphabet=(mode == "new_lc"))
+            title = "🔤 Кирилл yozuvida:"
+        elif mode in ("old_cl", "new_cl"):
+            result = cyrillic_to_latin(text, new_alphabet=(mode == "new_cl"))
+            title = "🔤 Lotin yozuvida:"
         elif mode == "spell":
             result, note = await spellcheck(text)
             title = "✍️ Imlo tekshiruvi:\n" + note + "\n\n"
