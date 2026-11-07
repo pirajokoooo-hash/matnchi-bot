@@ -279,7 +279,7 @@ test("Uzbek proofreading uses the upgraded Qwen model in one request", async () 
   });
   assert.equal(aiCalls.length, 1, "a normal Uzbek text should use one AI request");
   assert.equal(aiCalls[0].model, "@cf/qwen/qwen3-30b-a3b-fp8");
-  assert.equal(aiCalls[0].input.reasoning_effort, "low");
+  assert.equal(Object.hasOwn(aiCalls[0].input, "reasoning_effort"), false);
   const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.match(sent.body.text, /Toşkentdan Xivaga/);
   assert.match(sent.body.text, /Imlo tekşirildi/);
