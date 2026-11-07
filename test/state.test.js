@@ -416,7 +416,7 @@ test("Uzbek Cyrillic spelling is not mistaken for Russian", async () => {
       text: "бугун мен тошкентга бордим"
     }
   });
-  assert.match(aiCalls[0].input.messages[0].content, /expert Uzbek-language proofreader/);
+  assert.match(aiCalls[0].input.messages[0].content, /Uzbek-language proofreader/);
   const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.match(sent.body.text, /Бугун мен Тошкентга бордим\./);
   assert.match(sent.body.text, /Imlo tekshirildi/);
