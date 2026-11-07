@@ -2,9 +2,6 @@ name = "matnchi-bot"
 main = "src/index.js"
 compatibility_date = "2026-11-07"
 
-[[kv_namespaces]]
-binding = "USER_STATE"
-id = "23baa1ea680b40d4833d0e8f4c352e56"
 
 [ai]
 binding = "AI"
