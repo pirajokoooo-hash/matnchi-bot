@@ -212,3 +212,46 @@ test("2026 Uzbek alphabet Cyrillic-to-Latin uses Ö Ğ Ş Ç", async () => {
   const sent = calls.filter(x => x.method === "sendMessage").at(-1);
   assert.equal(sent.body.text, "Özbek Ğalaba Şahar Çiroq");
 });
+
+
+test("new Uzbek Latin O‘ and tutuq signs transliterate correctly with case preserved", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb8",
+      from: { id: 1005 },
+      data: "translit:new_lc",
+      message: { message_id: 13, chat: { id: 1005 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1005 },
+      chat: { id: 1005 },
+      text: "O‘ZBEK TILI — MA’RIFAT VA TA’LIM"
+    }
+  });
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "ЎЗБЕК ТИЛИ — МАЪРИФАТ ВА ТАЪЛИМ");
+});
+
+test("new Uzbek Latin apostrophe variants and G‘ are handled", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb9",
+      from: { id: 1006 },
+      data: "translit:new_lc",
+      message: { message_id: 14, chat: { id: 1006 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1006 },
+      chat: { id: 1006 },
+      text: "O'zbek, G‘alaba, ma’rifat va ta’lim"
+    }
+  });
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "Ўзбек, Ғалаба, маърифат ва таълим");
+});
