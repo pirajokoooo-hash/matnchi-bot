@@ -15,8 +15,54 @@ async function send(env,chatId,text,keyboard,newAlphabet=true){const b={chat_id:
 async function stateGet(env,id){const stub=env.USER_STATE_DO.get(env.USER_STATE_DO.idFromName(String(id)));const r=await stub.fetch("https://state/get");if(!r.ok)throw new Error("Foydalanuvchi holatini o‘qib bo‘lmadi");return await r.json();}
 async function stateSet(env,id,v){const stub=env.USER_STATE_DO.get(env.USER_STATE_DO.idFromName(String(id)));const r=await stub.fetch("https://state/set",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(v)});if(!r.ok)throw new Error("Foydalanuvchi holatini saqlab bo‘lmadi");}
 function caseLike(s,l,u){if(s.toUpperCase()===s)return u;if(s.slice(0,1).toUpperCase()===s.slice(0,1))return u.slice(0,1)+l.slice(1);return l;}
-function latinToCyrillic(input){const apos="'’‘ʻʼ´";let t=input;const pairs={yo:"ё",yu:"ю",ya:"я",ye:"е",ts:"ц"};const singles={a:"а",b:"б",d:"д",e:"е",f:"ф",g:"г",h:"ҳ",i:"и",j:"ж",k:"к",l:"л",m:"м",n:"н",o:"о",p:"п",q:"қ",r:"р",s:"с",t:"т",u:"у",v:"в",x:"х",y:"й",z:"з",w:"в",ö:"ў",ğ:"ғ",ş:"ш",ç:"ч"};let out="";for(let i=0;i<t.length;){const c=t[i],next=t[i+1],lo=c.toLowerCase();if((lo==="o"||lo==="g")&&next&&apos.includes(next)){const mapped=lo==="o"?"ў":"ғ";out+=c===c.toUpperCase()&&c!==c.toLowerCase()?mapped.toUpperCase():mapped;i+=2;continue;}const p=t.slice(i,i+2).toLowerCase();if(pairs[p]){out+=caseLike(t.slice(i,i+2),pairs[p],pairs[p].toUpperCase());i+=2;continue;}if(singles[lo])out+=c===c.toUpperCase()&&c!==c.toLowerCase()?singles[lo].toUpperCase():singles[lo];else if(apos.includes(c)){const prev=t[i-1]||"",following=t[i+1]||"";const upper=prev===prev.toUpperCase()&&prev!==prev.toLowerCase()&&following===following.toUpperCase()&&following!==following.toLowerCase();out+=upper?"Ъ":"ъ";}else out+=c;i++;}return out;}
-function cyrillicToLatin(input){const m={а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"yo",ж:"j",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"x",ц:"ts",ч:"ç",ш:"ş",щ:"şç",ъ:"ʼ",ь:"",э:"e",ю:"yu",я:"ya",ў:"ö",ғ:"ğ",қ:"q",ҳ:"h"};return Array.from(input).map(c=>{const v=m[c.toLowerCase()];if(v===undefined)return c;if(c===c.toUpperCase()&&c!==c.toLowerCase()&&v)return v[0].toUpperCase()+v.slice(1);return v;}).join("");}
+function latinToCyrillic(input){
+  const apostrophes="'’‘ʻʼ´";
+  const pairs={sh:"ш",ch:"ч",yo:"ё",yu:"ю",ya:"я",ye:"е",ts:"ц"};
+  const singles={a:"а",b:"б",d:"д",e:"е",f:"ф",g:"г",h:"ҳ",i:"и",j:"ж",k:"к",l:"л",m:"м",n:"н",o:"о",p:"п",q:"қ",r:"р",s:"с",t:"т",u:"у",v:"в",x:"х",y:"й",z:"з",w:"в",ö:"ў",ğ:"ғ",ş:"ш",ç:"ч"};
+  let out="";
+  const upper=(c)=>c===c.toUpperCase()&&c!==c.toLowerCase();
+  for(let i=0;i<input.length;){
+    const c=input[i], next=input[i+1]||"", lo=c.toLowerCase();
+    if((lo==="o"||lo==="g")&&apostrophes.includes(next)){
+      const mapped=lo==="o"?"ў":"ғ";
+      out+=upper(c)?mapped.toUpperCase():mapped;
+      i+=2;continue;
+    }
+    if(lo==="y"&&input.slice(i,i+3).length===3&&input[i+1]?.toLowerCase()==="o"&&apostrophes.includes(input[i+2])){
+      const value="йў";
+      out+=upper(c)?value.toUpperCase():value;
+      i+=3;continue;
+    }
+    const pair=input.slice(i,i+2).toLowerCase();
+    if(pairs[pair]){
+      const lower=pairs[pair], isAllCaps=input.slice(i,i+2)===input.slice(i,i+2).toUpperCase();
+      const isTitle=upper(c)&&!upper(next);
+      out+=isAllCaps?lower.toUpperCase():isTitle?lower.toUpperCase():lower;
+      i+=2;continue;
+    }
+    if(lo==="e"&&(!input[i-1]||!/[\p{L}]/u.test(input[i-1]))){
+      out+=upper(c)?"Э":"э";i++;continue;
+    }
+    if(singles[lo]){
+      out+=upper(c)?singles[lo].toUpperCase():singles[lo];i++;continue;
+    }
+    if(apostrophes.includes(c)){
+      out+="ъ";i++;continue;
+    }
+    out+=c;i++;
+  }
+  return out;
+}
+function cyrillicToLatin(input){
+  const map={а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"yo",ж:"j",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"x",ц:"ts",ч:"ç",ш:"ş",щ:"şç",ъ:"ʼ",ь:"",э:"e",ю:"yu",я:"ya",ў:"ö",ғ:"ğ",қ:"q",ҳ:"h"};
+  return Array.from(input).map(ch=>{
+    const value=map[ch.toLowerCase()];
+    if(value===undefined)return ch;
+    if(ch===ch.toUpperCase()&&ch!==ch.toLowerCase()&&value)return value[0].toUpperCase()+value.slice(1);
+    return value;
+  }).join("");
+}
+
 function detectSource(text){if(/\p{Script=Arabic}/u.test(text))return "ar";if(/\p{Script=Cyrillic}/u.test(text))return "ru";const s=" "+String(text).toLowerCase()+" ";if(/[ўқғҳ]/u.test(s)||/\b(bugun|ertaga|men|sen|biz|siz|uchun|uçun|juda|yaxshi|ishga|ketyapman|salom|rahmat|o‘zbek|ozbek|özbek|özbekiston|assalomu|alaykum|yaxshimisiz|sizga|tinchlik|baxt|tilayman|oilam|mening|onam|menga|doimo|yaxshilik|tilaydi|katta|boylik|bugungi|qanday|qayerda|kerak|bo‘ladi|emas|ham|bilan|sizning|bizning|köp|şahar|qişloq|yöl|keça|başlandi|ğalaba|farzandlaringiz|bolalaringiz)\b/u.test(s))return "uz";if(/[ıİ]/u.test(s)||/\b(ve|çok|için|merhaba|değil|güzel|teşekkür|çocuklar|mutlu)\b/u.test(s))return "tr";if(/\b(hello|the|and|you|this|that|today|good|going|work|i|am|is|are|my|children|happy|want)\b/i.test(s))return "en";return "auto";}
 async function translateWithCloudflareAI(env,text,target){if(!env.AI)throw new Error("Cloudflare AI ulanmagan");const names={uz:"Uzbek",ru:"Russian",en:"English",tr:"Turkish",ar:"Arabic"};const source=detectSource(text);const sourceHint=source==="auto"?"Identify the source language yourself.":"The source may be "+({uz:"Uzbek",ru:"Russian",en:"English",tr:"Turkish",ar:"Arabic"}[source])+", but verify it from the text.";const sourceNames={uz:"o‘zbek",ru:"rus",en:"ingliz",tr:"turk",ar:"arab"};const sourceLabel=source==="auto"?"aniqlangan tildan":sourceNames[source]+" tilidan";const targetLabel=sourceNames[target]+" tiliga";const system="You are an expert professional translator fluent in Uzbek, Russian, English, Turkish, and Arabic. Translate the user's entire text into "+names[target]+". "+sourceHint+" Preserve the exact meaning, facts, names, numbers, tone, paragraph structure, and punctuation. Never summarize, explain, add ideas, omit content, or repeat sentences. If the source is already "+names[target]+", return it unchanged. Return only the finished translation. For Uzbek, use natural standard Uzbek Latin; the app will convert it to its house alphabet. For Turkish, use natural native Turkish grammar and spelling. The correct dative form of şehir is şehre, never şehire. For Arabic, use clear Modern Standard Arabic.";
 const r=await env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8",{messages:[{role:"system",content:system},{role:"user",content:"Translate "+sourceLabel+" "+targetLabel+". Text:\n"+text}],max_tokens:Math.min(2200,Math.max(500,Math.ceil(text.length*1.2))),temperature:0.05});
@@ -24,10 +70,17 @@ let out=(r&&r.response)||(r&&r.choices&&r.choices[0]&&r.choices[0].message&&r.ch
 async function translateFallback(text,target){const u=new URL("https://translate.googleapis.com/translate_a/single");Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:text}).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});if(!r.ok)throw new Error("Zaxira tarjima xizmati vaqtincha ishlamayapti");const d=await r.json();if(Array.isArray(d)&&Array.isArray(d[0])){const out=d[0].filter(x=>x&&x[0]).map(x=>x[0]).join("").trim();if(out)return out;}throw new Error("Zaxira tarjima javobi bo‘sh");}
 async function translate(env,text,target){if(!["uz","ru","en","tr","ar"].includes(target))throw new Error("Tarjima tili noto‘g‘ri tanlangan");try{return await translateWithCloudflareAI(env,text,target);}catch(e){console.error("CLOUDFLARE_AI_FAILED",String(e&&e.message||e));try{return await translateFallback(text,target);}catch(f){console.error("TRANSLATION_FALLBACK_FAILED",String(f&&f.message||f));throw new Error("Aniq tarjima hozircha olinmadi. Matn buzib yuborilmasligi uchun natija chiqarilmadi. Birozdan keyin qayta urinib ko‘ring.");}}}
 function isUzbekText(text){
-  if(/\b(jahongir|jaxongir|johongir|xusan|husan|hilola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\b/i.test(text))return true;
-  if(/[ўқғҳ]/i.test(text)||/[öğşç]/i.test(text))return true;
-  return /\b(men|sen|biz|siz|bugun|ertaga|dost|do‘st|dostim|do‘stim|bilan|uchun|yaxshi|yomon|kitob|maktab|kutubxona|bordim|boraman|o‘qidim|oqidim|o‘qish|o'qish|o‘qidi|oqidi|oilam|onam|menga|kerak|bo‘ldi|bo'ldi|emas|ham|yerdan|yerda|xalq|tarix|tarixini|kelajak|kelajagini|qura|olmaydi|shahar|viloyat|samarqand|toshkent|toşkent|xiva|xorazm|xurshid|obida|obidalar|registon|buxoro|urgut|shahrisabz)\b/i.test(text)||/[oO][‘’ʻʼ'][gG][‘’ʻʼ']/.test(text);
+  const value=String(text);
+  const lower=value.toLocaleLowerCase("uz");
+  if(/[ўқғҳ]/u.test(lower))return true;
+  if(/[\u0400-\u04FF]/u.test(value)){
+    return /\b(салом|мен|сен|биз|сиз|учун|бугун|эртага|яхши|керак|билан|ҳам|йўқ|дўст|мактаб|китоб|ўзбекистон|тошкент|самарқанд|оила|онам|отам)\b/u.test(lower);
+  }
+  if(/\b(jahongir|jaxongir|johongir|xusan|husan|hilola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\b/u.test(lower))return true;
+  if(/[oO][ʻ‘’ʼ'][gG][ʻ‘’ʼ']/.test(value))return true;
+  return /\b(men|sen|biz|siz|bugun|ertaga|do‘st|dost|do‘stim|dostim|bilan|uchun|yaxshi|yomon|kitob|maktab|kutubxona|bordim|boraman|o‘qidim|oqidim|o‘qish|o'qish|o‘qidi|oqidi|oilam|onam|menga|kerak|bo‘ldi|bo'ldi|emas|ham|yerdan|yerda|xalq|tarix|tarixini|kelajak|kelajagini|qura|olmaydi|shahar|viloyat|samarqand|toshkent|toşkent|xiva|xorazm|xurshid|obida|obidalar|registon|buxoro|urgut|shahrisabz|özbek|özbekiston|ğalaba|şahar|çiroq|qişloq|yöl|keça|başlandi)\b/u.test(lower);
 }
+
 function fixCommonUzbekLatin(text,original=""){const words={boshlandi:"başlandi",boşlandi:"başlandi",uqam:"ukam",kecha:"keça",isimiz:"ishimiz",qishloqqa:"qişloqqa",qishloq:"qişloq",yomgir:"yomğir",boshladi:"başladi",boshlash:"başlaş",bogga:"boğga","bog‘ga":"boğga",korishdik:"körişdik",korishdi:"körişdi",tayyorlashimiz:"tayyorlaşimiz",tayyorlash:"tayyorlaş",uchun:"uçun",kechga:"keçga",keyin:"keyin","yog‘a":"yoğa",yoga:"yog‘a",yomgir:"yomg‘ir",qoygan:"qo‘ygan",uygondim:"uyg‘ondim",uygondi:"uyg‘ondi",dokon:"do‘kon",dokoniga:"do‘koniga",dokonidan:"do‘konidan",songra:"so‘ngra",bolgani:"bo‘lgani",bolgan:"bo‘lgan",otganini:"o‘tganini",soradi:"so‘radi",soradim:"so‘radim",dostimiz:"do‘stimiz",dostimizni:"do‘stimizni",dostlar:"do‘stlar",dostlarim:"do‘stlarim",dost:"do‘st",dosti:"do‘sti",dostim:"do‘stim",dostingiz:"do‘stingiz",kutubhona:"kutubxona",kutubhonaga:"kutubxonaga",kutubhonadan:"kutubxonadan",kutubhonada:"kutubxonada",korsatdi:"ko‘rsatdi",oqidim:"o‘qidim",oqiding:"o‘qiding",oqidi:"o‘qidi",oqidik:"o‘qidik",oqigan:"o‘qigan",oqish:"o‘qish",yahshi:"yaxshi",yomgir:"yomg‘ir",yogdi:"yog‘di",parkga:"parkka",boromiman:"borolmayman",galla:"ğalla",togga:"toğğa",gozal:"gözal",oglim:"o‘g‘lim",ogilxonaga:"o‘g‘ilxonaga",ogir:"og‘ir",kotarib:"ko‘tarib",togri:"to‘g‘ri",yolga:"yo‘lga",qoydi:"qo‘ydi"};let out=text.replace(/[A-Za-zÖöĞğŞşÇçʻʼ’‘']+/g,w=>{const key=w.toLowerCase().replace(/[ʻʼ’‘']/g,"");const v=words[key];if(!v)return w;if(w===w.toUpperCase())return v.toUpperCase();if(w[0]===w[0].toUpperCase())return v[0].toUpperCase()+v.slice(1);return v;});out=out.replace(/\bob\s+havo\b/gi,"ob-havo");out=out.replace(/\bota[ \t]+onamizga\b/gi,"ota-onamizga");out=out.replace(/\b(yumşatdik|yumshatdik)[ \t]*,[ \t]*va\b/gi,"$1 va");out=out.replace(/kutubxona[ \t]+ga/gi,"kutubxonaga");out=out.replace(/yer[ \t]+dan/gi,"yerdan");out=out.replace(/yer[ \t]+da/gi,"yerda");out=out.replace(/\b(oldim|oldik)[ \t]+(kitoblar\b)/i,"$1. $2");out=out.replace(/\b(bordim|qildim|ketdim|kirdim|qaytdim|oldim|oldik|oldik|oldik|oldik)[ \t]+(keyin)\b/gi,"$1, keyin");
 out=out.replace(/\b(bordim|bordik|qildim|qildik|ketdim|ketdik)[ \t]+(film|uyga)\b/gi,"$1, $2");out=out.replace(/\boziq[ \t]+ovqat\b/gi,"oziq-ovqat");out=out.replace(/\batrof[ \t]+muhit\b/gi,"atrof-muhit");out=out.replace(/\bhamma[ \t]*-[ \t]*ga\b/gi,"hammaga");out=out.replace(/\bhamma[ \t]+ga\b/gi,"hammaga");out=out.replace(/\b(suv|non)[ \t]+(non|mevalar)\b/gi,"$1, $2");out=out.replace(/\b(oldik|oldim)[ \t]+(manzilga)\b/gi,"$1. $2");out=out.replace(/\b(bordik|bordim)[ \t]+(yo‘lda|yo'lda)\b/gi,"$1. $2");out=out.replace(/\b(yordam berdi|yordam berdim|yordam berdik)[ \t]+(tushlikdan|tushlikdan so‘ng)\b/gi,"$1. $2");out=out.replace(/\b(olib bordi|olib bordik)[ \t]+(u yerda)\b/gi,"$1. U yerda");out=out.replace(/\b(o‘ynadim|o'ynadim|o‘ynadik|o'ynadik)[ \t]+(singlim|akam|ukam|onam|otam)\b/gi,"$1, $2");if(/\bkutubxonaga\b/i.test(original))out=out.replace(/\bkutubxona[ \t]+(bordik|bordim|kirdik|kirdim|boramiz|boraman)\b/gi,"kutubxonaga $1");out=out.replace(/\b(nonushtadan keyin|uyga qaytganimda|kechqurun)[ \t]*,[ \t]*(?=(dadam|onam|oilamiz)\b)/gi,"$1 ");if(/\bkitoblarni\b/i.test(original))out=out.replace(/\bkitoblarini\b/gi,"kitoblarni");if(/\batrof[ \t]+muhitni[ \t]+asrash\b/i.test(original))out=out.replace(/\batrof-muhitni[ \t]+muhofaza[ \t]+qilish\b/gi,"atrof-muhitni asrash");out=out.replace(/\b(plastik)[ \t]+(qog‘oz|qog'oz|shisha)\b/gi,"$1, $2");out=out.replace(/\b(butilka)[ \t]+(qog‘oz|qog'oz)\b/gi,"$1, $2");out=out.replace(/\b(qog‘oz|qog'oz)[ \t]+(va)[ \t]+(shisha)\b/gi,"$1 $2 $3");out=out.replace(/\b(yog‘masa|yog'masa)[ \t]+(musobaqa)\b/gi,"$1, $2");out=out.replace(/\b(yumshatib)[ \t]+(gullarga)\b/gi,"$1, $2");out=out.replace(/\b(telefon qilib)[ \t]+(do‘kondan)\b/gi,"$1, $2");if(/\bkelgusida\b/i.test(original))out=out.replace(/\bkelganda\b/gi,"kelgusida");if(/\bkitoblarning\b/i.test(original))out=out.replace(/\bkitoblarining\b/gi,"kitoblarning");out=out.replace(/\b(bordik|bordim|qaytdik|qaytdim|oldik|oldim|xarid qildik|uchrashdik)[ \t]+(avval|songra|so‘ngra|tushlikdan|kechqurun|havo|men)\b/gi,"$1. $2");out=out.replace(/\b(bordik|bordim|kirdik|kirdim|oldik|oldim)[ \t]+(u yerdan)\b/gi,"$1. U yerdan");out=out.replace(/\b(so‘radi|soradi)[ \t]+(men)\b/gi,"$1. $2");out=out.replace(/\b(bordik|bordim|qaytdik|qaytdim|davom ettirdik|ko‘rishdik|terdik|quydik)[ \t]+(yo‘lda|qishloqqa|buvim|keyin|kechga|onam)\b/gi,"$1. $2");out=out.replace(/\b(ekan|edi)[ \t]+(tushlikdan|kechqurun|kechga)\b/gi,"$1. $2");out=out.replace(/\b(davom ettirdik)[ \t]+(qishloqqa)\b/gi,"$1. $2");out=out.replace(/\b(oldi|oldik|xarid qildik)[ \t]+(keyin|tushlik vaqtida|tushlikdan keyin)\b/gi,"$1. $2");out=out.replace(/\b(dam oldik|soradim|aytdi|joylashtirdi|tayyorladim|oldi|oldik)[ \t]+(tushlik vaqtida|tushlikdan keyin|u kishi|uyga|men esa|kun|keyin)\b/gi,"$1. $2");out=out.replace(/\b(qildik|oldi|oldik|harakatlandi|aytdi)[ \t]+(lekin|keyin|uyga)\b/gi,"$1. $2");out=out.replace(/\b(boraman|boramiz|boradi|bordim|boribman)[ \t]+(u yerdan)\b/gi,"$1. U yerdan");const proper=[[/\btoşkent\b/gi,"Toşkent"],[/\bsamarqand(?=(?:dan|ga|da|ning|ni|dagi|gacha)?\b)/gi,"Samarqand"],[/\bjizzax\b/gi,"Jizzax"],[/\bnavoiy\b/gi,"Navoiy"],[/\bregiston\b/gi,"Registon"],[/\bşohi\s+zinda\b/gi,"Şohi Zinda"],[/\bgöri\s+amir\b/gi,"Göri Amir"],[/\bamir\s+temur\b/gi,"Amir Temur"],[/\bmirzo\s+uluğbek\b/gi,"Mirzo Uluğbek"],[/\balişer\s+navoiy\b/gi,"Alişer Navoiy"],[/\bözbekiston\b/gi,"Özbekiston"],[/\bbuxoro\b/gi,"Buxoro"],[/\bxiva\b/gi,"Xiva"],[/\bxorazm\b/gi,"Xorazm"],[/\bqöqon\b/gi,"Qöqon"],[/\burgut\b/gi,"Urgut"],[/\bşahrisabz\b/gi,"Şahrisabz"],[/\bxusan\b/gi,"Xusan"],[/\bhilola opa\b/gi,"Hilola opa"]];for(const [re,value] of proper)out=out.replace(re,value);
 const boundaries=[[/\by[o‘'’]l oldim\s+biz yo[l‘'’]da\b/gi,"yo‘l oldim. Biz yo‘lda"],[/\bo‘tdik\s+samarqandga yetib\b/gi,"o‘tdik. Samarqandga yetib"],[/\btomosha qildik\s+xusan tarixiy\b/gi,"tomosha qildik. Xusan tarixiy"],[/\bbilarkan\s+u menga\b/gi,"bilarkan. U menga"],[/\baytib berdi\s+keyin biz\b/gi,"aytib berdi. Keyin biz"],[/\bbordik\s+kutubxonachi\b/gi,"bordik. Kutubxonachi"],[/\bko‘rsatdi\s+men o‘zbekiston\b/gi,"ko‘rsatdi. Men O‘zbekiston"],[/\btanladi\s+kitoblarning\b/gi,"tanladi. Kitoblarning"],[/\bbor edi\s+tushlikdan so‘ng\b/gi,"bor edi. Tushlikdan so‘ng"],[/\bsotib oldik\s+sotuvchi\b/gi,"sotib oldik. Sotuvchi"],[/\btopdi\s+kechqurun\b/gi,"topdi. Kechqurun"],[/\bqoldi\s+men xo‘jalik\b/gi,"qoldi. Men xo‘jalik"],[/\bqildim\s+u tezda\b/gi,"qildim. U tezda"],[/\btekshirdi\s+agar ertaga\b/gi,"tekshirdi. Agar ertaga"],[/\btomosha qilamiz\s+safar davomida\b/gi,"tomosha qilamiz. Safar davomida"]];for(const [re,value] of boundaries)out=out.replace(re,value);
@@ -202,54 +255,56 @@ async function spellUzbek(env,text){
 }
 async function spellOther(env,text){
   if(!env.AI)throw new Error("Imlo tekshirish xizmati ulanmagan");
-  const arabic=/[\u0600-\u06FF]/.test(text);
-  const russian=!arabic&&/[\u0400-\u04FF]/.test(text);
-  const turkishMarks=/[çğıİöşüÇĞIÖŞÜ]/.test(text);
-  const turkishWords=(text.match(/\b(ve|bir|bu|için|icin|değil|degil|çok|cok|güzel|guzel|bugün|bugun|yarın|yarin|merhaba|teşekkür|tesekkur|lütfen|lutfen|benim|senin|bizim|onlar|olarak|ile|ama|çünkü|cunku|daha|kadar|sonra|önce|once)\b/gi)||[]).length;
-  const turkish=!arabic&&!russian&&(turkishMarks||turkishWords>=2);
-  const language=arabic?"Arabic":russian?"Russian":turkish?"Turkish":"English";
+  const arabic=/\p{Script=Arabic}/u.test(text);
+  const cyrillic=/\p{Script=Cyrillic}/u.test(text);
+  const turkishDistinct=/[ıİüÜ]/u.test(text);
+  const turkishMarks=/[çğöşÇĞÖŞ]/u.test(text);
+  const turkishWords=(text.match(/\b(merhaba|nasılsın|nasilsin|teşekkür|tesekkur|lütfen|lutfen|değil|degil|çünkü|cunku|bugün|bugun|yarın|yarin|çocuk|çocuklar|şehir|şehre|şehri|öğrenci|öğretmen|güle|hoşça|arkadaş|arkadas|gidiyorum|geliyorum|nasıl|neden|nerede|benim|senin|bizim|onların|için|icin)\b/giu)||[]).length;
+  const turkish=!arabic&&!cyrillic&&(turkishDistinct||turkishMarks||turkishWords>=1);
+  const language=arabic?"Arabic":cyrillic?"Russian":turkish?"Turkish":"English";
   const scriptCheck=arabic
-    ?(out)=>/[\u0600-\u06FF]/.test(out)
-    :russian?(out)=>/[\u0400-\u04FF]/.test(out)
-    :(out)=>!(/[\u0400-\u04FF\u0600-\u06FF]/.test(out));
-  const system="You are a strict proofreader of "+language+". Make ONLY necessary spelling, grammar and punctuation corrections. This is NOT a translation or rewriting task. Keep every original idea, fact, name, sentence and word choice wherever possible. Never invent, repeat, paraphrase, simplify or expand any phrase. Never change the language. If the text is already correct, return it unchanged. Return only the full corrected text.";
-  const extract=r=>String(r?.response||r?.choices?.[0]?.message?.content||r?.choices?.[0]?.text||r?.result?.response||r?.output_text||r?.generated_text||"").trim();
-  let out="";
-  let timer;
+    ?out=>/\p{Script=Arabic}/u.test(out)
+    :cyrillic?out=>/\p{Script=Cyrillic}/u.test(out)
+    :out=>!(/[\u0400-\u04FF\u0600-\u06FF]/u.test(out));
+  const languageName={Arabic:"arab tilida",Russian:"rus tilida",Turkish:"turk tilida",English:"ingliz tilida"}[language];
+  const system="You are a highly accurate native-level "+language+" proofreader. Correct spelling, grammar, word forms, capitalization, punctuation and sentence boundaries. Do not translate. Do not rewrite for style. Preserve every fact, name, number, sentence, meaning, tone and paragraph. Capitalize personal names, surnames, cities, countries, landmarks and institutions when clearly identifiable. Never guess or replace a person's name. Do not add, remove, summarize, explain or repeat content. If a sentence is already correct, leave it unchanged. Return only the complete corrected text in the same language and script.";
+  const extract=r=>String(r?.response||r?.choices?.[0]?.message?.content||r?.choices?.[0]?.text||r?.result?.response||r?.result?.choices?.[0]?.message?.content||r?.output_text||r?.generated_text||"").trim();
+  let out="",timer;
   try{
     const r=await Promise.race([
       env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8",{messages:[
         {role:"system",content:system},
-        {role:"user",content:"Proofread the following "+language+" text. Correct only clear errors. Preserve the original content and wording; do not translate or rewrite.\n\n"+text}
-      ],max_tokens:Math.min(1800,Math.max(400,Math.ceil(text.length*0.65))),temperature:0,seed:23}),
+        {role:"user",content:"Correct the following text "+languageName+". Fix every clear spelling, grammar and punctuation error, including missing full stops and capitalization. Preserve the entire original text.\n\n"+text}
+      ],max_tokens:Math.min(2200,Math.max(500,Math.ceil(text.length*0.8))),temperature:0,seed:23}),
       new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 20 soniyada javob bermadi")),20000);})
     ]);
     out=extract(r);
   }catch(e){console.error("OTHER_PROOFREAD_FAILED",String(e&&e.message||e));}
   finally{clearTimeout(timer);}
-  const thinkEnd=out.indexOf("</think>");
+  const thinkEnd=out.lastIndexOf("</think>");
   if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
   out=out.replace(/^["“”]|["“”]$/g,"").trim();
-  if(!out) return {corrected:text,note:"⚠️ Matnni ishonchli tuzatib bo‘lmadi. Asl matn saqlandi."};
+  if(!out)return{corrected:text,note:"⚠️ Matnni ishonchli tuzatib bo‘lmadi. Asl matn saqlandi."};
   const tokens=s=>s.toLocaleLowerCase().match(/[\p{L}\p{M}]+/gu)||[];
   const inputWords=tokens(text),outputWords=tokens(out);
   const ratio=outputWords.length/Math.max(1,inputWords.length);
-  const inputCounts=new Map();
-  for(const w of inputWords)inputCounts.set(w,(inputCounts.get(w)||0)+1);
-  let preserved=0;
-  const remaining=new Map(inputCounts);
+  const counts=new Map();
+  for(const w of inputWords)counts.set(w,(counts.get(w)||0)+1);
+  let preserved=0;const remaining=new Map(counts);
   for(const w of outputWords){const n=remaining.get(w)||0;if(n>0){preserved++;remaining.set(w,n-1);}}
   const overlap=preserved/Math.max(1,inputWords.length);
-  const ngramCounts=s=>{const a=tokens(s),m=new Map();for(let i=0;i+3<a.length;i++){const k=a.slice(i,i+4).join(" ");m.set(k,(m.get(k)||0)+1);}return m;};
-  const originalNgrams=ngramCounts(text),correctedNgrams=ngramCounts(out);
+  const ngrams=s=>{const a=tokens(s),m=new Map();for(let i=0;i+3<a.length;i++){const k=a.slice(i,i+4).join(" ");m.set(k,(m.get(k)||0)+1);}return m;};
+  const originalNgrams=ngrams(text),correctedNgrams=ngrams(out);
   const addedRepeat=[...correctedNgrams].some(([k,n])=>n>(originalNgrams.get(k)||0)+1);
-  const suspicious=out.length<Math.max(5,text.length*0.55)||out.length>text.length*1.45||ratio<0.72||ratio>1.3||overlap<(inputWords.length<8?0.35:0.58)||addedRepeat||!scriptCheck(out);
+  const suspicious=out.length<Math.max(5,text.length*0.55)||out.length>text.length*1.55||ratio<0.68||ratio>1.35||overlap<(inputWords.length<8?0.3:0.5)||addedRepeat||!scriptCheck(out);
   if(suspicious){
     console.warn("OTHER_PROOFREAD_REJECTED",{language,ratio,overlap,addedRepeat,scriptOk:scriptCheck(out)});
-    return {corrected:text,note:"⚠️ Ma’no o‘zgarishi mumkinligi sababli asl matn saqlandi."};
+    return{corrected:text,note:"⚠️ Ma’no yoki matn tuzilishi o‘zgarishi mumkinligi sababli asl matn saqlandi."};
   }
-  return{corrected:out,note:language+" imlosi tekshirildi."};
+  const note={Arabic:"✅ Arabcha imlo tekshirildi.",Russian:"✅ Ruscha imlo tekshirildi.",Turkish:"✅ Turkcha imlo tekshirildi.",English:"✅ Inglizcha imlo tekshirildi."}[language];
+  return{corrected:out,note};
 }
+
 async function spell(env,text){
   if(isUzbekText(text))return await spellUzbek(env,text);
   return await spellOther(env,text);
