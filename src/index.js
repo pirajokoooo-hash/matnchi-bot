@@ -94,8 +94,7 @@ function fixUzbekNamesAndHX(text){
  }
  const historic=[[/\bamir temur\b/gi,"Amir Temur"],[/\bmirzo ulug‘bek\b/gi,"Mirzo Ulug‘bek"],[/\bmirzo ulugbek\b/gi,"Mirzo Ulug‘bek"],[/\balisher navoiy\b/gi,"Alisher Navoiy"],[/\bshohi\s+zinda\b/gi,"Shohi Zinda"],[/\bgo‘ri amir\b/gi,"Go‘ri Amir"]];
  for(const [re,v] of historic)out=out.replace(re,v);
- out=out.replace(/\b(Xusan bilan Hilmola kutubxonaga) bordi\b/gi,"$1 bordilar");
- out=out.replace(/\b(Ular\b[^.!?]{0,140}?)\b(ko‘rdi|gaplashdi)\b/giu,(_m,prefix,verb)=>prefix+(verb.toLocaleLowerCase("uz")==="ko‘rdi"?"ko‘rdilar":"gaplashdilar"));
+  out=out.replace(/\b(Ular\b[^.!?]{0,140}?)\b(ko‘rdi|gaplashdi)\b/giu,(_m,prefix,verb)=>prefix+(verb.toLocaleLowerCase("uz")==="ko‘rdi"?"ko‘rdilar":"gaplashdilar"));
  out=out.replace(/\b(Ular hech qachon xatoga yo‘l qo‘ymaslik va har bir ishni xolis bajarish kerakligini) gaplashdi\b/gi,"$1 gaplashdilar");
  return out;
 }
