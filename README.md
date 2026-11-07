@@ -1,23 +1,21 @@
-# Matnchi Bot
+# Matnchi Bot — Cloudflare Workers
 
-Telegram bot xizmatlari:
-- Matn tarjimasi (o‘zbek, rus, ingliz, turk va arab tillari)
-- O‘zbek yozuvini almashtirish:
-  - Eski lotin → kirill
-  - Yangi lotin → kirill
-  - Kirill → eski lotin
-  - Kirill → yangi lotin
-- Ruscha va inglizcha imlo tekshiruvi
+Telegram botning webhook varianti.
 
-Yangi o‘zbek lotin alifbosidagi Ö, Ğ, Ş va Ç harflari ham taniladi. Eski lotin yozuvi ham ishlashda davom etadi.
+## Cloudflare sozlamalari
+1. Workers & Pages bo‘limida GitHub orqali loyihani ulang.
+2. `USER_STATE` nomli KV namespace yarating va uning ID sini `wrangler.toml` ichidagi `REPLACE_WITH_KV_NAMESPACE_ID` o‘rniga yozing.
+3. Worker secrets sifatida `BOT_TOKEN`, `WEBHOOK_SECRET`, `SETUP_SECRET` kiriting.
+4. Deploy qiling.
+5. Worker manzilidagi `/register?key=SETUP_SECRET qiymati` manzilini bir marta oching. Javobda `"ok":true` chiqishi webhook o‘rnatilganini bildiradi.
+6. Telegram botga `/start` yuboring.
 
-## Ishga tushirish
-1. Python 3.10 yoki yangiroq versiyani o‘rnating.
-2. `pip install -r requirements.txt` buyrug‘ini bajaring.
-3. `BOT_TOKEN` muhit o‘zgaruvchisiga BotFather bergan maxfiy tokenni kiriting.
-4. `python bot.py` buyrug‘i bilan ishga tushiring.
+`WEBHOOK_SECRET` va `SETUP_SECRET` uchun uzun, tasodifiy maxfiy qiymatlar ishlating. Ularni GitHub yoki chatga yozmang.
 
-## Muhim eslatma
-Tarjima Google'ning ommaviy tarjima manzilidan, ruscha va inglizcha imlo tekshiruvi Yandex Speller'dan foydalanadi. Bu xizmatlarning ishlashi va cheklovlari uchinchi tomon tomonidan boshqariladi. O‘zbekcha imlo tekshiruvi hozircha mavjud emas.
+## Xizmatlar
+- Tarjima: Google Translate ommaviy manzili (uchinchi tomon; rasmiy API kafolati yo‘q).
+- Ruscha va inglizcha imlo: Yandex Speller.
+- Lotin/kirill: bot ichidagi o‘zgartirish funksiyalari.
+- Foydalanuvchi tanlovi: Cloudflare KV da 30 kun saqlanadi.
 
-Telegram tokenini hech qachon kod ichiga yoki GitHub fayliga joylamang.
+Muhim: `bot.py` dagi polling botini webhook bilan bir vaqtda ishga tushirmang.
