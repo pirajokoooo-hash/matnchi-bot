@@ -255,3 +255,55 @@ test("new Uzbek Latin apostrophe variants and G‘ are handled", async () => {
   const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "Ўзбек, Ғалаба, маърифат ва таълим");
 });
+
+test("Uzbek proofreading uses the upgraded Qwen model in one request", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  env.AI.run = async (model, input) => {
+    aiCalls.push({ model, input });
+    return { response: "Kecha men Toshkentdan Xivaga bordim, Xurshid akam bilan." };
+  };
+  await update(env, {
+    callback_query: {
+      id: "spell1",
+      from: { id: 2001 },
+      data: "mode:spell",
+      message: { message_id: 21, chat: { id: 2001 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 2001 },
+      chat: { id: 2001 },
+      text: "kecha men toshkentdan xivaga bordim xurshid akam bilan."
+    }
+  });
+  assert.equal(aiCalls.length, 1, "a normal Uzbek text should use one AI request");
+  assert.equal(aiCalls[0].model, "@cf/qwen/qwen3.8-27b");
+  assert.equal(aiCalls[0].input.reasoning_effort, "low");
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Toşkentdan Xivaga/);
+  assert.match(sent.body.text, /Imlo tekşirildi/);
+});
+
+test("Uzbek proofreading rejects duplicated final words instead of sending bad text", async () => {
+  const { env, calls } = makeEnv();
+  env.AI.run = async () => ({ response: "O‘z tarixini bilmagan xalq kelajagini qura olmaydi. Olmaydi." });
+  await update(env, {
+    callback_query: {
+      id: "spell2",
+      from: { id: 2002 },
+      data: "mode:spell",
+      message: { message_id: 22, chat: { id: 2002 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 2002 },
+      chat: { id: 2002 },
+      text: "oz tarixini bilmagan xalq kelajagini qura olmaydi."
+    }
+  });
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /takrorlangan so‘z aniqlandi/);
+  assert.doesNotMatch(sent.body.text, /Imlo tekşirildi/);
+});
