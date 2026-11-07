@@ -138,7 +138,7 @@ async function spellUzbek(env,text){
           {role:"system",content:system},
           {role:"user",content:"Proofread the following Uzbek text. Return the complete corrected text only.\n\n"+modelInput}
         ],
-        max_tokens:1800,
+        max_tokens:4000,
         temperature:0,
         seed:17
       }),
@@ -154,7 +154,7 @@ async function spellUzbek(env,text){
         env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
           {role:"system",content:system},
           {role:"user",content:"Proofread this Uzbek text. Correct spelling, grammar and punctuation only. Preserve all meaning, facts, names and sentence order. Return the full corrected text only.\n\n"+modelInput}
-        ],max_tokens:1800,temperature:0}),
+        ],max_tokens:4000,temperature:0}),
         new Promise((_,reject)=>{fallbackTimer=setTimeout(()=>reject(new Error("Zaxira imlo xizmati 18 soniyada javob bermadi")),18000);})
       ]);
       out=extract(r);
@@ -174,7 +174,7 @@ async function spellUzbek(env,text){
         env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
           {role:"system",content:system+" This is a completeness retry. Do not shorten the text. Preserve every original detail and sentence. Output length and word count should remain close to the input."},
           {role:"user",content:"Correct the spelling and punctuation of this entire Uzbek text. It is essential that you retain every sentence and every detail. Do not summarize or omit anything. Return the full corrected text only.\n\n"+modelInput}
-        ],max_tokens:2500,temperature:0}),
+        ],max_tokens:4000,temperature:0}),
         new Promise((_,reject)=>{retryTimer=setTimeout(()=>reject(new Error("Qayta tekshirish vaqti tugadi")),20000);})
       ]);
       const retryOut=extract(retry).replace(/^["“”]|["“”]$/g,"").trim();
