@@ -1,4 +1,4 @@
-import { restoreKnownUzbekNames } from "./uzbek_names.js";
+import { restoreKnownUzbekNames, fixKnownPluralAgreement } from "./uzbek_names.js";
 
 const API = "https://api.telegram.org/bot";
 const ADMIN_ID="8902835474";
@@ -195,6 +195,7 @@ async function spellUzbek(env,text){
     out=finalUzbekCleanup(out);
     out=fixUzbekNamesAndHX(out);
     out=restoreKnownUzbekNames(out,modelInput);
+    out=fixKnownPluralAgreement(out);
     out=out.replace(/\bJasurqa\b/g,"Jasurga").replace(/\bIçon qal[’'‘]a\b/gi,"Ichan qal’a").replace(/\bIçan qal[’'‘]a\b/gi,"Ichan qal’a");
   }
   return{corrected:out,note:"✅ Imlo tekshirildi."};
