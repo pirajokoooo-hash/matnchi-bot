@@ -70,6 +70,8 @@ function finalUzbekCleanup(text){
  out=out.replace(/\b(yaxshi bo‘lsa)\s+(biz)/i,"$1, $2");
  out=out.replace(/\b(Shahrisabzga boramiz)\s+(aks holda)/i,"$1, $2");
  out=out.replace(/\b(muhim)\s+(chunki)/i,"$1, $2");
+ out=out.replace(/\b(tomosha qildik)\s+(?=Xusan tarixiy)/i,"$1. ");
+ out=out.replace(/\b(tushundimki)\s+(?=tarixni bilish)/i,"$1, ");
  out=out.replace(/(^|[.!?]\s+)([a-z])/g,(_m,p,ch)=>p+ch.toUpperCase());
  if(out&&!/[.!?…]["'»)]?$/u.test(out.trim()))out=out.trim()+".";
  return out;
