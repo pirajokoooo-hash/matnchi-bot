@@ -18,8 +18,6 @@ const NAME_RULES = BASE_NAMES.map(name => ({
   outputForms: [name.toLocaleLowerCase("uz")]
 }));
 
-// These are observed AI substitutions, and are corrected only when the
-// corresponding intended name is present in the original user message.
 NAME_RULES.unshift(
   {
     canonical: "Jahongir",
@@ -34,15 +32,15 @@ NAME_RULES.unshift(
 );
 
 function escapeRegex(value) {
-  return value.split("").map(ch => "\\\\.^$|?*+()[]{}".includes(ch) ? "\\\\" + ch : ch).join("");
+  return value.split("").map(ch => "\\.^$|?*+()[]{}".includes(ch) ? "\\" + ch : ch).join("");
 }
 
 function makeAlternatives(forms) {
-  return forms.map(form => form.trim().split(" ").map(escapeRegex).join("\\\\s+")).join("|");
+  return forms.map(form => form.trim().split(" ").map(escapeRegex).join("\\s+")).join("|");
 }
 
 function hasName(text, forms) {
-  const pattern = new RegExp("(^|[^\\\\p{L}])(?:" + makeAlternatives(forms) + ")(?=$|[^\\\\p{L}])", "iu");
+  const pattern = new RegExp("(^|[^\\p{L}])(?:" + makeAlternatives(forms) + ")(?=$|[^\\p{L}])", "iu");
   return pattern.test(String(text));
 }
 
@@ -51,7 +49,7 @@ export function restoreKnownUzbekNames(corrected, original) {
   const source = String(original);
   for (const rule of NAME_RULES) {
     if (!hasName(source, rule.sourceForms)) continue;
-    const pattern = new RegExp("(^|[^\\\\p{L}])(?:" + makeAlternatives(rule.outputForms) + ")(?=$|[^\\\\p{L}])", "giu");
+    const pattern = new RegExp("(^|[^\\p{L}])(?:" + makeAlternatives(rule.outputForms) + ")(?=$|[^\\p{L}])", "giu");
     result = result.replace(pattern, (_match, prefix) => prefix + rule.canonical);
   }
   return result;
