@@ -47,7 +47,8 @@ function latinToCyrillic(input){
       out+=upper(c)?singles[lo].toUpperCase():singles[lo];i++;continue;
     }
     if(apostrophes.includes(c)){
-      out+="ъ";i++;continue;
+      const prev=input[i-1]||"", following=input[i+1]||"";
+      out+=upper(prev)&&upper(following)?"Ъ":"ъ";i++;continue;
     }
     out+=c;i++;
   }
