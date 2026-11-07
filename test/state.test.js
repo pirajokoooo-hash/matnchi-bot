@@ -72,7 +72,7 @@ test("chosen translation language survives callback and next message", async () 
   await update(env, {
     message: { from: { id: 777 }, chat: { id: 777 }, text: "I want to learn English and improve my skills." }
   });
-  const sent = calls.find(x => x.method === "sendMessage");
+  const sent = calls.find(x => x.method === "editMessageText" && x.body.text === "Я хочу изучать английский и улучшать свои навыки.");
   assert.ok(sent, "bot should send a translation");
   assert.equal(sent.body.text, "Я хочу изучать английский и улучшать свои навыки.");
 });
@@ -98,7 +98,7 @@ test("Uzbek Latin greeting is detected as Uzbek before Arabic translation", asyn
   assert.ok(qwen, "Uzbek text should use the Uzbek-capable translation model");
   const prompt = qwen.input.messages[1].content;
   assert.match(prompt, /o‘zbek tilidan arab tiliga/);
-  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.equal(sent.body.text, "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة.");
 });
 
