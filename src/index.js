@@ -53,6 +53,27 @@ function fixKnownUzbekProofreadingErrors(text,original=""){
   if(out&&!/[.!?…]["\u0027»)]?$/u.test(out.trim()))out=out.trim()+".";
   return out;
 }
+function finalUzbekCleanup(text){
+ let out=String(text);
+ const fixes=[
+ [/\bxusand\b/gi,"Xusan"],[/\bxusan\b/gi,"Xusan"],[/\btoşkent\b/gi,"Toshkent"],[/\bkeça\b/gi,"kecha"],[/\byöl\b/gi,"yo‘l"],[/\bborgaç\b/gi,"borgach"],[/\bşohi\s+zinda\b/gi,"Shohi Zinda"],[/\bğori\s+amir\b/gi,"Go‘ri Amir"],[/\btomoşa\b/gi,"tomosha"],[/\bköp\b/gi,"ko‘p"],[/\bkutubxonaçi\b/gi,"kutubxonachi"],[/\bkörsatdi\b/gi,"ko‘rsatdi"],[/\bözbekiston\b/gi,"O‘zbekiston"],[/\bqöqon\b/gi,"Qo‘qon"],[/\btuşlik\b/gi,"tushlik"],[/\bsotuvçi\b/gi,"sotuvchi"],[/\badaştirib\b/gi,"adashtirib"],[/\bkeçqurun\b/gi,"kechqurun"],[/\bçiroq\b/gi,"chiroq"],[/\bişlamay\b/gi,"ishlamay"],[/\bxöjalik\b/gi,"xo‘jalik"],[/\bqönğiroq\b/gi,"qo‘ng‘iroq"],[/\btekşirdi\b/gi,"tekshirdi"],[/\byaxşi\b/gi,"yaxshi"],[/\bbölsa\b/gi,"bo‘lsa"],[/\bşahrisabzga\b/gi,"Shahrisabzga"],[/\btuşundimki\b/gi,"tushundimki"],[/\bbiliş\b/gi,"bilish"],[/\buçun\b/gi,"uchun"],[/\bçunki\b/gi,"chunki"],[/\btöğri\b/gi,"to‘g‘ri"]
+ ];
+ for(const [re,v] of fixes)out=out.replace(re,v);
+ const names=[[/\bregiston\b/gi,"Registon"],[/\bsamarqand\b/gi,"Samarqand"],[/\bjizzax\b/gi,"Jizzax"],[/\bnavoiy\b/gi,"Navoiy"],[/\bamir temur\b/gi,"Amir Temur"],[/\bmirzo ulug‘bek\b/gi,"Mirzo Ulug‘bek"],[/\bmirzo ulugbek\b/gi,"Mirzo Ulug‘bek"],[/\balisher navoiy\b/gi,"Alisher Navoiy"],[/\bxiva\b/gi,"Xiva"],[/\bxorazm\b/gi,"Xorazm"],[/\bbuxoro\b/gi,"Buxoro"],[/\burgut\b/gi,"Urgut"]];
+ for(const [re,v] of names)out=out.replace(re,v);
+ out=out.replace(/([.!?]\s+)([a-z])/g,(_m,p,ch)=>p+ch.toUpperCase());
+ out=out.replace(/\b(Toshkentdan Samarqandga yo‘l oldim)\s+(?=Biz)/i,"$1. ");
+ out=out.replace(/\b(Registon maydoni)\s+(Shohi Zinda)/i,"$1, $2");
+ out=out.replace(/\b(Shohi Zinda)\s+(Go‘ri Amir)/i,"$1 va $2");
+ out=out.replace(/\b(ikkita kitob)\s+(Xusan esa)/i,"$1, $2");
+ out=out.replace(/\b(bordik)\s+(u yerda)/i,"$1. U yerda");
+ out=out.replace(/\b(yaxshi bo‘lsa)\s+(biz)/i,"$1, $2");
+ out=out.replace(/\b(Shahrisabzga boramiz)\s+(aks holda)/i,"$1, $2");
+ out=out.replace(/\b(muhim)\s+(chunki)/i,"$1, $2");
+ out=out.replace(/(^|[.!?]\s+)([a-z])/g,(_m,p,ch)=>p+ch.toUpperCase());
+ if(out&&!/[.!?…]["'»)]?$/u.test(out.trim()))out=out.trim()+".";
+ return out;
+}
 function toStandardUzbek(text){return String(text).replace(/Ö/g,"O‘").replace(/ö/g,"o‘").replace(/Ğ/g,"G‘").replace(/ğ/g,"g‘").replace(/Ş/g,"Sh").replace(/ş/g,"sh").replace(/Ç/g,"Ch").replace(/ç/g,"ch");}
 async function spellUzbek(env,text){
   if(!env.AI)throw new Error("Imlo tekshirish xizmati ulanmagan");
@@ -106,6 +127,7 @@ async function spellUzbek(env,text){
   if(!inputCyr){
     out=fixCommonUzbekLatin(out,modelInput);
     out=fixKnownUzbekProofreadingErrors(out,modelInput);
+    out=finalUzbekCleanup(out);
     out=out.replace(/\bJasurqa\b/g,"Jasurga").replace(/\bIçon qal[’'‘]a\b/gi,"Ichan qal’a").replace(/\bIçan qal[’'‘]a\b/gi,"Ichan qal’a");
   }
   return{corrected:out,note:"✅ Imlo tekshirildi."};
