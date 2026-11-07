@@ -213,23 +213,42 @@ async function spellOther(env,text){
     ?(out)=>/[\u0600-\u06FF]/.test(out)
     :russian?(out)=>/[\u0400-\u04FF]/.test(out)
     :(out)=>!(/[\u0400-\u04FF\u0600-\u06FF]/.test(out));
-  const system="You are a careful native "+language+" proofreader. Correct the text to standard, natural "+language+". Correct spelling, grammar, word forms and suffixes, capitalization where that language uses it, punctuation, spacing and sentence boundaries. Preserve the exact meaning, names, facts, tone and every sentence. Do not translate, summarize, omit, add content or change the writing system. Return only the complete corrected text.";
-  let timer;let r;
+  const system="You are a strict proofreader of "+language+". Make ONLY necessary spelling, grammar and punctuation corrections. This is NOT a translation or rewriting task. Keep every original idea, fact, name, sentence and word choice wherever possible. Never invent, repeat, paraphrase, simplify or expand any phrase. Never change the language. If the text is already correct, return it unchanged. Return only the full corrected text.";
+  const extract=r=>String(r?.response||r?.choices?.[0]?.message?.content||r?.choices?.[0]?.text||r?.result?.response||r?.output_text||r?.generated_text||"").trim();
+  let out="";
+  let timer;
   try{
-    r=await Promise.race([
-      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
+    const r=await Promise.race([
+      env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8",{messages:[
         {role:"system",content:system},
-        {role:"user",content:"Proofread this "+language+" text completely. Fix all language-specific errors, including punctuation and sentence boundaries. Keep the same language and writing system. Do not explain your edits. Return the entire text.\\n\\n"+text}
-      ],max_tokens:1024,temperature:0.0}),
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 15 soniyada javob bermadi")),15000);})
+        {role:"user",content:"Proofread the following "+language+" text. Correct only clear errors. Preserve the original content and wording; do not translate or rewrite.\n\n"+text}
+      ],max_tokens:Math.min(1800,Math.max(400,Math.ceil(text.length*0.65))),temperature:0,seed:23}),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 20 soniyada javob bermadi")),20000);})
     ]);
-  }finally{clearTimeout(timer);}
-  let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
-  const thinkEnd=out.indexOf("</think>");if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
+    out=extract(r);
+  }catch(e){console.error("OTHER_PROOFREAD_FAILED",String(e&&e.message||e));}
+  finally{clearTimeout(timer);}
+  const thinkEnd=out.indexOf("</think>");
+  if(out.startsWith("<think>")&&thinkEnd>=0)out=out.slice(thinkEnd+8).trim();
   out=out.replace(/^["“”]|["“”]$/g,"").trim();
-  if(!out)throw new Error("Imlo tekshirish xizmati bo‘sh javob berdi");
-  if(out.length<Math.max(5,text.length*0.55))throw new Error("Javob to‘liq emas, matn qisqarib ketdi");
-  if(!scriptCheck(out))throw new Error(language+" yozuvi saqlanmadi");
+  if(!out) return {corrected:text,note:"⚠️ Matnni ishonchli tuzatib bo‘lmadi. Asl matn saqlandi."};
+  const tokens=s=>s.toLocaleLowerCase().match(/[\p{L}\p{M}]+/gu)||[];
+  const inputWords=tokens(text),outputWords=tokens(out);
+  const ratio=outputWords.length/Math.max(1,inputWords.length);
+  const inputCounts=new Map();
+  for(const w of inputWords)inputCounts.set(w,(inputCounts.get(w)||0)+1);
+  let preserved=0;
+  const remaining=new Map(inputCounts);
+  for(const w of outputWords){const n=remaining.get(w)||0;if(n>0){preserved++;remaining.set(w,n-1);}}
+  const overlap=preserved/Math.max(1,inputWords.length);
+  const ngramCounts=s=>{const a=tokens(s),m=new Map();for(let i=0;i+3<a.length;i++){const k=a.slice(i,i+4).join(" ");m.set(k,(m.get(k)||0)+1);}return m;};
+  const originalNgrams=ngramCounts(text),correctedNgrams=ngramCounts(out);
+  const addedRepeat=[...correctedNgrams].some(([k,n])=>n>(originalNgrams.get(k)||0)+1);
+  const suspicious=out.length<Math.max(5,text.length*0.55)||out.length>text.length*1.45||ratio<0.72||ratio>1.3||overlap<(inputWords.length<8?0.35:0.58)||addedRepeat||!scriptCheck(out);
+  if(suspicious){
+    console.warn("OTHER_PROOFREAD_REJECTED",{language,ratio,overlap,addedRepeat,scriptOk:scriptCheck(out)});
+    return {corrected:text,note:"⚠️ Ma’no o‘zgarishi mumkinligi sababli asl matn saqlandi."};
+  }
   return{corrected:out,note:language+" imlosi tekshirildi."};
 }
 async function spell(env,text){
