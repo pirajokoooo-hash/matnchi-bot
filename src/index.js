@@ -29,7 +29,7 @@ async function spellUzbek(env,text){
   if(!env.AI)throw new Error("Imlo tekshirish xizmati ulanmagan");
   const inputCyr=/[\\u0400-\\u04FF]/.test(text);
   const modelInput=inputCyr?text:toStandardUzbek(text);
-  const prompt="Quyidagi matn o‘zbek tilida. Uni adabiy o‘zbek imlosiga to‘liq moslab tekshir. Xatolarni tuzat: harf va tutuq belgisi, o‘/g‘, sh/ch, qo‘shib-ajratib yozish, so‘z oxirlari, kelishik va egalik qo‘shimchalari, bosh harflar, vergul va nuqtalar. Gaplarni to‘g‘ri ajrat. Ismlar, joy nomlari va ma’noni saqla. Matnni qisqartirma, gap yoki so‘zlarni tashlab ketma, qayta hikoya qilma, tarjima qilma. Fe’lning birlik-ko‘plik shaklini va shaxsini o‘zgartirma. Faqat tuzatilgan to‘liq matnni qaytar. Izoh va sarlavha yozma.\\n\\n"+modelInput;
+  const prompt="Quyidagi matn o‘zbek tilida. Uni adabiy o‘zbek imlosiga to‘liq moslab tekshir. Faqat aniq imlo, grammatik va tinish belgisi xatolarini tuzat. Sinonim ishlatma, gap tuzilishini sababsiz qayta yozma va yangi ibora qo‘shma. Har bir gapning mazmuni va ketma-ketligini saqla. Ism, joy nomi va tarixiy obida nomlarini o‘zgartirma; bosh harfini to‘g‘rila. Kelishik qo‘shimchalarini to‘g‘ri yoz: Jasurga (Jasurqa emas), Xivaga, Toshkentdan. X va H harflarini farqla: Xiva, Xorazm, Xurshid; havo, hunarmand. Ichan qal’a nomini saqla. Fe’lning shaxs-soni va zamonini o‘zgartirma: bordik/bordim, oldi/oldik shakllarini almashtirma. Matnni qisqartirma, gap yoki so‘zlarni tashlab ketma, qayta hikoya qilma, tarjima qilma. Faqat tuzatilgan to‘liq matnni qaytar. Izoh va sarlavha yozma.\\n\\n"+modelInput;
   let timer;
   let r;
   try{
@@ -57,7 +57,7 @@ async function spellUzbek(env,text){
     if(!/[\\u0400-\\u04FF]/.test(out))throw new Error("Kirill yozuvi saqlanmadi");
   }else{
     if(/[\\u0400-\\u04FF]/.test(out))throw new Error("Lotin yozuvi saqlanmadi");
-    out=fixCommonUzbekLatin(out,modelInput);
+    out=fixCommonUzbekLatin(out,modelInput);out=out.replace(/\bJasurqa\b/g,"Jasurga").replace(/\bIçon qal[’'‘]a\b/gi,"Ichan qal’a").replace(/\bIçan qal[’'‘]a\b/gi,"Ichan qal’a");
   }
   return{corrected:out,note:"✅ Imlo tekshirildi."};
 }
