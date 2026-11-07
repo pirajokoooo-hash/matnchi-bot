@@ -445,3 +445,29 @@ test("Arabic spelling uses Arabic proofreader and preserves Arabic script", asyn
   assert.match(sent.body.text, /Arabcha imlo tekshirildi/);
   assert.match(sent.body.text, /السلام عليكم، كيف حالكم؟/);
 });
+
+
+test("Uzbek proofreading makes one model request and refuses an empty response", async () => {
+  const { env, calls } = makeEnv();
+  let requests = 0;
+  env.AI.run = async () => {
+    requests++;
+    return { response: "" };
+  };
+  await update(env, {
+    callback_query: {
+      id: "sp-empty", from: { id: 3201 }, data: "mode:spell",
+      message: { message_id: 37, chat: { id: 3201 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 3201 }, chat: { id: 3201 },
+      text: "kecha men toshkentga bordim"
+    }
+  });
+  assert.equal(requests, 1, "proofreading should not call a slower second model");
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.doesNotMatch(sent.body.text, /Imlo tekşirildi/);
+  assert.match(sent.body.text, /bo‘sh javob|Xizmatda xatolik/);
+});
