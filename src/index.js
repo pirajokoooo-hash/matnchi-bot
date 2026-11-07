@@ -118,7 +118,7 @@ async function spellUzbek(env,text){
   }
   out=out.replace(/^["“”]|["“”]$/g,"").trim();
   if(!out)throw new Error("Imlo tekshirish xizmati bo‘sh javob berdi");
-  if(out.length<Math.max(8,modelInput.length*0.72)||out.length>modelInput.length*1.28)throw new Error("Javob hajmi asl matndan keskin farq qildi; natija yuborilmadi");
+  const inputWords=modelInput.match(/[\p{L}\p{M}]+/gu)||[];\n  const outputWords=out.match(/[\p{L}\p{M}]+/gu)||[];\n  if(out.length<Math.max(8,modelInput.length*0.45)||out.length>modelInput.length*1.5||outputWords.length<Math.max(3,inputWords.length*0.68))throw new Error("Javob to‘liq emas, matn qisqarib ketdi; natija yuborilmadi");
   if(/(?:^|\n)\s*(?:izoh|sarlavha)\s*:|quyidagi matn|faqat aniq imlo|sinonim ishlatma|imlo tekshirildi/i.test(out))throw new Error("Javobga ortiqcha izoh aralashdi; natija yuborilmadi");
   const words=out.match(/[\p{L}\p{M}]+/gu)||[];
   if(words.length>1&&words.at(-1).toLocaleLowerCase("uz")===words.at(-2).toLocaleLowerCase("uz"))throw new Error("Javob oxirida takrorlangan so‘z aniqlandi; natija yuborilmadi");
