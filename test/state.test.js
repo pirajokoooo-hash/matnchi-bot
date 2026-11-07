@@ -42,7 +42,7 @@ function makeEnv() {
         aiCalls.push({ model, input });
         return model.includes("m2m100")
           ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." }
-          : input.messages[1].content.includes("o‘zbek tilidan turk tiliga") ? { response: "Yarın arkadaşım ile şehire gideceğim." } : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
+          : input.messages[1].content.includes("o‘zbek tilidan turk tiliga") ? { response: "Yarın arkadaşım ile şehire gideceğim." } : input.messages[1].content.includes("Onam menga doimo yaxshilik tilaydi.") ? { response: "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا." } : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
       } }
     }
   };
@@ -100,6 +100,31 @@ test("Uzbek Latin greeting is detected as Uzbek before Arabic translation", asyn
   assert.match(prompt, /o‘zbek tilidan arab tiliga/);
   const sent = calls.filter(x => x.method === "sendMessage").at(-1);
   assert.equal(sent.body.text, "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة.");
+});
+
+
+test("Uzbek sentence about mother is detected as Uzbek before Arabic translation", async () => {
+  const { env, calls, aiCalls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb5",
+      from: { id: 1002 },
+      data: "lang:ar",
+      message: { message_id: 9, chat: { id: 1002 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1002 },
+      chat: { id: 1002 },
+      text: "Onam menga doimo yaxshilik tilaydi."
+    }
+  });
+  const qwen = aiCalls.find(x => x.model.includes("qwen"));
+  assert.ok(qwen, "Uzbek sentence should use the Uzbek-capable translation model");
+  assert.match(qwen.input.messages[1].content, /o‘zbek tilidan arab tiliga/);
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا.");
 });
 
 test("Turkish translation corrects the observed şehir dative spelling error", async () => {
