@@ -17,7 +17,7 @@ function makeEnv() {
         stores.set(id, new UserState(ctx, {}));
       }
       const instance = stores.get(id);
-      return { fetch: (...args) => instance.fetch(...args) };
+      return { fetch: (input, init) => instance.fetch(new Request(input, init)) };
     }
   };
   globalThis.fetch = async (url, init = {}) => {
