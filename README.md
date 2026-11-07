@@ -1,21 +1,36 @@
-# Matnchi Bot — Cloudflare Workers
+# Matnchi Bot
 
-Telegram botning webhook varianti.
+Telegram bot Cloudflare Workers webhook orqali ishlaydi.
 
-## Cloudflare sozlamalari
-1. Workers & Pages bo‘limida GitHub orqali loyihani ulang.
-2. `USER_STATE` nomli KV namespace yarating va uning ID sini `wrangler.toml` ichidagi `REPLACE_WITH_KV_NAMESPACE_ID` o‘rniga yozing.
-3. Worker secrets sifatida `BOT_TOKEN`, `WEBHOOK_SECRET`, `SETUP_SECRET` kiriting.
-4. Deploy qiling.
-5. Worker manzilidagi `/register?key=SETUP_SECRET qiymati` manzilini bir marta oching. Javobda `"ok":true` chiqishi webhook o‘rnatilganini bildiradi.
-6. Telegram botga `/start` yuboring.
+## Ishga tushirish uchun kerakli sozlamalar
 
-`WEBHOOK_SECRET` va `SETUP_SECRET` uchun uzun, tasodifiy maxfiy qiymatlar ishlating. Ularni GitHub yoki chatga yozmang.
+Cloudflare Worker bindings:
+- `USER_STATE` — KV namespace
+- `AI` — Cloudflare Workers AI
 
-## Xizmatlar
-- Tarjima: Google Translate ommaviy manzili (uchinchi tomon; rasmiy API kafolati yo‘q).
-- Ruscha va inglizcha imlo: Yandex Speller.
-- Lotin/kirill: bot ichidagi o‘zgartirish funksiyalari.
-- Foydalanuvchi tanlovi: Cloudflare KV da 30 kun saqlanadi.
+Cloudflare secrets:
+- `TELEGRAM_BOT_TOKEN`
+- `WEBHOOK_SECRET`
+- `SETUP_SECRET`
 
-Muhim: `bot.py` dagi polling botini webhook bilan bir vaqtda ishga tushirmang.
+GitHub Actions secret:
+- `CLOUDFLARE_API_TOKEN`
+
+`wrangler.toml` ichida Worker nomi va KV namespace ID saqlanadi. Maxfiy tokenlarni repozitoriyga yozmang.
+
+## Joylash
+
+`main` tarmog‘iga o‘zgarish yuborilganda GitHub Actions:
+1. JavaScript sintaksisini tekshiradi.
+2. Wrangler dry-run bajaradi.
+3. Worker'ni Cloudflare'ga joylaydi.
+
+Webhookni birinchi marta ulash yoki qayta ulash uchun Worker manzilidagi `/register?key=SETUP_SECRET` yo‘li ishlatiladi.
+
+## Bot xizmatlari
+
+- Tarjima: Cloudflare Workers AI, Google Translate va MyMemory zaxira yo‘llari.
+- Lotin/kirill: Worker ichidagi o‘zgartirish funksiyalari.
+- Imlo: Yandex Speller (ruscha va inglizcha).
+
+Eslatma: bepul xizmatlar kvota va so‘rov cheklovlariga ega. Tarjima sifati va mavjudligi alohida amaliy sinovdan o‘tkazilishi kerak.
