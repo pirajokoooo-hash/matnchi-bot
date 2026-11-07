@@ -170,3 +170,45 @@ test("start clears saved user mode", async () => {
   const last = calls.filter(x => x.method === "sendMessage").at(-1);
   assert.match(last.body.text, /Avval menyudan xizmatni tanlang/);
 });
+
+test("2026 Uzbek alphabet Latin-to-Cyrillic uses Ö Ğ Ş Ç", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb6",
+      from: { id: 1003 },
+      data: "translit:new_lc",
+      message: { message_id: 11, chat: { id: 1003 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1003 },
+      chat: { id: 1003 },
+      text: "Özbek Ğalaba Şahar Çiroq"
+    }
+  });
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "Ўзбек Ғалаба Шаҳар Чироқ");
+});
+
+test("2026 Uzbek alphabet Cyrillic-to-Latin uses Ö Ğ Ş Ç", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "cb7",
+      from: { id: 1004 },
+      data: "translit:new_cl",
+      message: { message_id: 12, chat: { id: 1004 } }
+    }
+  });
+  await update(env, {
+    message: {
+      from: { id: 1004 },
+      chat: { id: 1004 },
+      text: "Ўзбек Ғалаба Шаҳар Чироқ"
+    }
+  });
+  const sent = calls.filter(x => x.method === "sendMessage").at(-1);
+  assert.equal(sent.body.text, "Özbek Ğalaba Şahar Çiroq");
+});
