@@ -121,8 +121,24 @@ async function spellUzbek(env,text){
   out=out.replace(/^["“”]|["“”]$/g,"").trim();
   if(!out)throw new Error("Imlo tekshirish xizmati bo‘sh javob berdi");
   const inputWords=modelInput.match(/[\p{L}\p{M}]+/gu)||[];
-  const outputWords=out.match(/[\p{L}\p{M}]+/gu)||[];
-  if(out.length<Math.max(8,modelInput.length*0.45)||out.length>modelInput.length*1.5||outputWords.length<Math.max(3,inputWords.length*0.68))throw new Error("Javob to‘liq emas, matn qisqarib ketdi; natija yuborilmadi");
+  let outputWords=out.match(/[\p{L}\p{M}]+/gu)||[];
+  if(out.length<Math.max(8,modelInput.length*0.45)||out.length>modelInput.length*1.5||outputWords.length<Math.max(3,inputWords.length*0.68)){
+    let retryTimer;
+    try{
+      const retry=await Promise.race([
+        env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{messages:[
+          {role:"system",content:system+" This is a completeness retry. Do not shorten the text. Preserve every original detail and sentence. Output length and word count should remain close to the input."},
+          {role:"user",content:"Correct the spelling and punctuation of this entire Uzbek text. It is essential that you retain every sentence and every detail. Do not summarize or omit anything. Return the full corrected text only.\n\n"+modelInput}
+        ],max_tokens:2500,temperature:0}),
+        new Promise((_,reject)=>{retryTimer=setTimeout(()=>reject(new Error("Qayta tekshirish vaqti tugadi")),20000);})
+      ]);
+      const retryOut=extract(retry).replace(/^["“”]|["“”]$/g,"").trim();
+      const retryWords=retryOut.match(/[\p{L}\p{M}]+/gu)||[];
+      if(retryOut.length>out.length&&retryWords.length>outputWords.length){out=retryOut;outputWords=retryWords;}
+    }catch(e){console.error("UZBEK_PROOFREAD_RETRY_FAILED",String(e&&e.message||e));}
+    finally{clearTimeout(retryTimer);}
+  }
+  if(out.length<Math.max(8,modelInput.length*0.45)||out.length>modelInput.length*1.5||outputWords.length<Math.max(3,inputWords.length*0.55))throw new Error("Matn to‘liq tekshirilmadi. Qayta urinib ko‘ring.");
   if(/(?:^|\n)\s*(?:izoh|sarlavha)\s*:|quyidagi matn|faqat aniq imlo|sinonim ishlatma|imlo tekshirildi/i.test(out))throw new Error("Javobga ortiqcha izoh aralashdi; natija yuborilmadi");
   const words=out.match(/[\p{L}\p{M}]+/gu)||[];
   if(words.length>1&&words.at(-1).toLocaleLowerCase("uz")===words.at(-2).toLocaleLowerCase("uz"))throw new Error("Javob oxirida takrorlangan so‘z aniqlandi; natija yuborilmadi");
