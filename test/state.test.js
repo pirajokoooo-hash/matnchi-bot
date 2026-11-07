@@ -36,7 +36,7 @@ function makeEnv() {
       TELEGRAM_BOT_TOKEN: "test-token",
       WEBHOOK_SECRET: "test-secret",
       USER_STATE_DO: binding,
-      AI: { async run() { return { response: "Я хочу изучать английский и улучшать свои навыки." }; } }
+      AI: { async run(model) { return model.includes("m2m100") ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." } : { response: "Я хочу изучать английский и улучшать свои навыки." }; } }
     }
   };
 }
