@@ -40,8 +40,8 @@ function makeEnv() {
       USER_STATE_DO: binding,
       AI: { async run(model, input) {
         aiCalls.push({ model, input });
-        return model.includes("m2m100")
-          ? { translated_text: "Я хочу изучать английский и улучшать свои навыки." }
+        return input.messages[1].content.includes("ingliz tilidan rus tiliga")
+          ? { response: "Я хочу изучать английский и улучшать свои навыки." }
           : input.messages[1].content.includes("o‘zbek tilidan turk tiliga") ? { response: "Yarın arkadaşım ile şehire gideceğim." } : input.messages[1].content.includes("Onam menga doimo yaxshilik tilaydi.") ? { response: "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا." } : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
       } }
     }
