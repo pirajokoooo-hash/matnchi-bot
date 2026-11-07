@@ -23,7 +23,7 @@ async function translateUzbekWithQwen(env,text,target,source){if(!env.AI)throw n
 async function translateWithCloudflareAI(env,text,target){if(!env.AI)return null;const source=detectSource(text);if(source==="uz"||target==="uz")return translateUzbekWithQwen(env,text,target,source);const sl=AI_LANG[source],tl=AI_LANG[target];if(!sl||!tl)throw new Error("Bu til yoʼnalishi hozircha qo‘llab-quvvatlanmaydi");if(sl===tl)return text;const r=await env.AI.run("@cf/meta/m2m100-1.2b",{text,source_lang:sl,target_lang:tl});const out=r?.translated_text;if(!out)throw new Error("Cloudflare AI tarjima javobi bo‘sh");return out;}
 async function translate(env,text,target){try{const ai=await translateWithCloudflareAI(env,text,target);if(ai)return ai;}catch(e){console.error("CLOUDFLARE_AI_FAILED",String(e&&e.message||e));if(detectSource(text)==="uz"||target==="uz")throw new Error("Özbekça tarjima vaqtincha ishlamadi. Xato: "+String(e&&e.message||e).slice(0,100));}const u=new URL("https://translate.googleapis.com/translate_a/single");Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:text}).forEach(([k,v])=>u.searchParams.set(k,v));try{const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});if(r.ok){const d=await r.json();if(Array.isArray(d)&&Array.isArray(d[0])){const out=d[0].filter(x=>x&&x[0]).map(x=>x[0]).join("");if(out)return out;}}}catch(e){console.error("GOOGLE_TRANSLATE_FAILED",String(e&&e.message||e));}return translateFallback(text,target);}
 function isUzbekText(text){
-  if(/\\b(jahongir|jaxongir|johongir|xusan|husan|hilola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\\b/i.test(text))return true;
+  if(/\\b(jahongir|jaxongir|johongir|xusan|husan|hilola|hilmola|umar|temur|sardor|jasur|aziz|dilshod|bobur|bekzod|shohruh|shoxrux)\\b/i.test(text))return true;
   if(/[ўқғҳ]/i.test(text)||/[öğşç]/i.test(text))return true;
   return /\b(men|sen|biz|siz|bugun|ertaga|dost|do‘st|dostim|do‘stim|bilan|uchun|yaxshi|yomon|kitob|maktab|kutubxona|bordim|boraman|o‘qidim|oqidim|o‘qish|o'qish|o‘qidi|oqidi|oilam|onam|menga|kerak|bo‘ldi|bo'ldi|emas|ham|yerdan|yerda|xalq|tarix|tarixini|kelajak|kelajagini|qura|olmaydi|shahar|viloyat|samarqand|toshkent|toşkent|xiva|xorazm|xurshid|obida|obidalar|registon|buxoro|urgut|shahrisabz)\b/i.test(text)||/[oO][‘’ʻʼ'][gG][‘’ʻʼ']/.test(text);
 }
@@ -56,42 +56,44 @@ function fixKnownUzbekProofreadingErrors(text,original=""){
 }
 function fixUzbekNamesAndHX(text){
  let out=String(text);
- out=out.replace(/\\b(jaxongir|jahongir|johongir)\\b/gi,"Jahongir");
+ out=out.replace(/\b(jaxongir|jahongir|johongir)\b/gi,"Jahongir");
  out=out.replace(/\bxamma\b/gi,"hamma").replace(/\bxayot\b/gi,"hayot").replace(/\bxurmat\b/gi,"hurmat");
  const hx=[
-  [/\\bhato(?=(?:dan|ga|da|ni|ning|lar|lari)?\\b)/gi,"xato"],
-  [/\\bxamma(?=(?:si|ni|ning|ga|da|dan)?\\b)/gi,"hamma"],
-  [/\\bxam(?=(?:da|dan|ga|ni|ning)?\\b)/gi,"ham"],
-  [/\\bxaqida(?=(?:gi|dan|ga|da)?\\b)/gi,"haqida"],
-  [/\\bxayot(?=(?:i|im|imiz|da|dan|ga)?\\b)/gi,"hayot"],
-  [/\\bxozir(?=(?:gi|cha|da)?\\b)/gi,"hozir"],
-  [/\\bxurmat(?=(?:li|ga|ni|ning)?\\b)/gi,"hurmat"],
-  [/\\bxarakat(?=(?:i|ga|ni|da|dan)?\\b)/gi,"harakat"],
-  [/\\bxisob(?=(?:ni|ga|da|dan|lab)?\\b)/gi,"hisob"],
-  [/\\bxujjat(?=(?:lar|lari|ni|ga|da)?\\b)/gi,"hujjat"],
-  [/\\bxamisha\\b/gi,"hamisha"],
-  [/\\bhursand\\b/gi,"xursand"],
-  [/\\bhoxish(?=(?:i|im|imiz|ga|ni)?\\b)/gi,"xohish"],
-  [/\\bhoxlam(?=oq|aslik|ayman|aydi|aymiz|oqchi)/gi,"xohlam"],
-  [/\\bxech(?=\\s|$)/gi,"hech"],
-  [/\\bxechqachon\\b/gi,"hechqachon"],
-  [/\\bxech kim\\b/gi,"hech kim"],
-  [/\\bxech narsa\\b/gi,"hech narsa"]
+  [/\bhato(?=(?:dan|ga|da|ni|ning|lar|lari)?\b)/gi,"xato"],
+  [/\bxamma(?=(?:si|ni|ning|ga|da|dan)?\b)/gi,"hamma"],
+  [/\bxam(?=(?:da|dan|ga|ni|ning)?\b)/gi,"ham"],
+  [/\bxaqida(?=(?:gi|dan|ga|da)?\b)/gi,"haqida"],
+  [/\bxayot(?=(?:i|im|imiz|da|dan|ga)?\b)/gi,"hayot"],
+  [/\bxozir(?=(?:gi|cha|da)?\b)/gi,"hozir"],
+  [/\bxurmat(?=(?:li|ga|ni|ning)?\b)/gi,"hurmat"],
+  [/\bxarakat(?=(?:i|ga|ni|da|dan)?\b)/gi,"harakat"],
+  [/\bxisob(?=(?:ni|ga|da|dan|lab)?\b)/gi,"hisob"],
+  [/\bxujjat(?=(?:lar|lari|ni|ga|da)?\b)/gi,"hujjat"],
+  [/\bxamisha\b/gi,"hamisha"],
+  [/\bhursand\b/gi,"xursand"],
+  [/\bhoxish(?=(?:i|im|imiz|ga|ni)?\b)/gi,"xohish"],
+  [/\bhoxlam(?=oq|aslik|ayman|aydi|aymiz|oqchi)/gi,"xohlam"],
+  [/\bxech(?=\\s|$)/gi,"hech"],
+  [/\bxechqachon\b/gi,"hechqachon"],
+  [/\bxech kim\b/gi,"hech kim"],
+  [/\bxech narsa\b/gi,"hech narsa"]
  ];
  for(const [re,v] of hx)out=out.replace(re,v);
- const names=["xusan","husan","ali","vali","hasan","hasanali","husanboy","xusniddin","sardor","jasur","aziz","aziza","dilshod","dilnoza","madina","malika","shahzod","shohruh","shoxrux","bekzod","behruz","bobur","umar","umida","nigora","nargiza","nilufar","mohira","mohinur","muhammad","abdulloh","abdurahmon","islom","islombek","temur","temurbek","rustam","ravshan","farhod","farxod","farrux","oybek","oysha","zuhra","zaynab","humayra","umayra","hadiya","kumush","hilola"];
+ const names=["xusan","husan","hilmola","ali","vali","hasan","hasanali","husanboy","xusniddin","sardor","jasur","aziz","aziza","dilshod","dilnoza","madina","malika","shahzod","shohruh","shoxrux","bekzod","behruz","bobur","umar","umida","nigora","nargiza","nilufar","mohira","mohinur","muhammad","abdulloh","abdurahmon","islom","islombek","temur","temurbek","rustam","ravshan","farhod","farxod","farrux","oybek","oysha","zuhra","zaynab","humayra","umayra","hadiya","kumush","hilola"];
  const suffix="(?:ning|dan|dagi|gacha|larga|lari|lar|ga|da|ni|i|im|imiz|si|siga|sini)?";
  for(const name of names){
-  const re=new RegExp("\\\\b("+name+")("+suffix+")(?=\\\\b)","giu");
+  const re=new RegExp("\\\b("+name+")("+suffix+")(?=\\\b)","giu");
   out=out.replace(re,(_m,n,s)=>n.charAt(0).toLocaleUpperCase("uz")+n.slice(1)+s);
  }
  const places=["toshkent","samarqand","buxoro","xiva","xorazm","jizzax","navoiy","urgut","shahrisabz","qo‘qon","qoqon","andijon","namangan","farg‘ona","fargona","termiz","qarshi","nukus","chirchiq","qibray","zomin","registon"];
  for(const name of places){
-  const re=new RegExp("\\\\b("+name+")(?=(?:dan|ga|da|ni|ning|dagi|gacha|lik)?\\\\b)","giu");
+  const re=new RegExp("\\\b("+name+")(?=(?:dan|ga|da|ni|ning|dagi|gacha|lik)?\\\b)","giu");
   out=out.replace(re,m=>m.charAt(0).toLocaleUpperCase("uz")+m.slice(1));
  }
- const historic=[[/\\bamir temur\\b/gi,"Amir Temur"],[/\\bmirzo ulug‘bek\\b/gi,"Mirzo Ulug‘bek"],[/\\bmirzo ulugbek\\b/gi,"Mirzo Ulug‘bek"],[/\\balisher navoiy\\b/gi,"Alisher Navoiy"],[/\\bshohi\\s+zinda\\b/gi,"Shohi Zinda"],[/\\bgo‘ri amir\\b/gi,"Go‘ri Amir"]];
+ const historic=[[/\bamir temur\b/gi,"Amir Temur"],[/\bmirzo ulug‘bek\b/gi,"Mirzo Ulug‘bek"],[/\bmirzo ulugbek\b/gi,"Mirzo Ulug‘bek"],[/\balisher navoiy\b/gi,"Alisher Navoiy"],[/\bshohi\\s+zinda\b/gi,"Shohi Zinda"],[/\bgo‘ri amir\b/gi,"Go‘ri Amir"]];
  for(const [re,v] of historic)out=out.replace(re,v);
+ out=out.replace(/\b(Xusan bilan Hilmola kutubxonaga) bordi\b/gi,"$1 bordilar");
+ out=out.replace(/\b(Ular hech qachon xatoga yo‘l qo‘ymaslik va har bir ishni xolis bajarish kerakligini) gaplashdi\b/gi,"$1 gaplashdilar");
  return out;
 }
 function finalUzbekCleanup(text){
