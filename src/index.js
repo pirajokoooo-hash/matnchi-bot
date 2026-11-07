@@ -37,8 +37,8 @@ async function spellUzbek(env,text){
       env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8",{messages:[
         {role:"system",content:"You are a careful native Uzbek proofreader. Return the complete corrected text only. Preserve every sentence and its meaning. Never summarize, omit, translate, or invent content. Correct spelling, grammar, suffixes, capitalization and punctuation. Keep the original script."},
         {role:"user",content:prompt}
-      ],max_tokens:1024,temperature:0.0}),
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 15 soniyada javob bermadi")),15000);})
+      ],max_tokens:2048,temperature:0.0}),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Imlo tekshirish 15 soniyada javob bermadi")),30000);})
     ]);
   }finally{clearTimeout(timer);}
   let out=String(r?.response||r?.choices?.[0]?.message?.content||r?.result?.response||r?.output_text||"").trim();
