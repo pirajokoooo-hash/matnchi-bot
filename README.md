@@ -2,8 +2,14 @@
 
 Telegram bot xizmatlari:
 - Matn tarjimasi (o‘zbek, rus, ingliz, turk va arab tillari)
-- O‘zbek lotin ↔ kirill yozuvi
+- O‘zbek yozuvini almashtirish:
+  - Eski lotin → kirill
+  - Yangi lotin → kirill
+  - Kirill → eski lotin
+  - Kirill → yangi lotin
 - Ruscha va inglizcha imlo tekshiruvi
+
+Yangi o‘zbek lotin alifbosidagi Ö, Ğ, Ş va Ç harflari ham taniladi. Eski lotin yozuvi ham ishlashda davom etadi.
 
 ## Ishga tushirish
 1. Python 3.10 yoki yangiroq versiyani o‘rnating.
@@ -11,8 +17,7 @@ Telegram bot xizmatlari:
 3. `BOT_TOKEN` muhit o‘zgaruvchisiga BotFather bergan maxfiy tokenni kiriting.
 4. `python bot.py` buyrug‘i bilan ishga tushiring.
 
-## Render
-Render'da Background Worker yarating, ushbu GitHub omborini ulang va Environment bo‘limiga `BOT_TOKEN` nomli maxfiy qiymat qo‘shing.
+## Muhim eslatma
+Tarjima Google'ning ommaviy tarjima manzilidan, ruscha va inglizcha imlo tekshiruvi Yandex Speller'dan foydalanadi. Bu xizmatlarning ishlashi va cheklovlari uchinchi tomon tomonidan boshqariladi. O‘zbekcha imlo tekshiruvi hozircha mavjud emas.
 
-## Eslatma
-Tarjima Google'ning ommaviy tarjima manzilidan, ruscha va inglizcha imlo tekshiruvi Yandex Speller'dan foydalanadi. Bu xizmatlarning ishlashi va cheklovlari uchinchi tomon tomonidan boshqariladi. O‘zbekcha imlo tekshiruvi hozircha yo‘q. Telegram tokenini hech qachon kod ichiga yoki GitHub fayliga joylamang.
+Telegram tokenini hech qachon kod ichiga yoki GitHub fayliga joylamang.
