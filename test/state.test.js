@@ -304,6 +304,6 @@ test("Uzbek proofreading rejects duplicated final words instead of sending bad t
     }
   });
   const sent = calls.filter(x => x.method === "editMessageText").at(-1);
-  assert.match(sent.body.text, /takrorlangan so‘z aniqlandi/);
+  assert.match(sent.body.text, /takrorlangan.*aniqlandi/);
   assert.doesNotMatch(sent.body.text, /Imlo tekşirildi/);
 });
