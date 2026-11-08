@@ -406,8 +406,8 @@ test("translation menu selects target language and returns untranslated-script o
   });
   const sent = calls.filter(x => x.method === "editMessageText").at(-1);
   assert.match(sent.body.text, /Привет, мир!/);
-  assert.match(sent.body.text, /Asl til: English/);
-  assert.match(sent.body.text, /Tarjima tili: Русский/);
+  assert.equal(sent.body.text, "Привет, мир!");
+  assert.doesNotMatch(sent.body.text, /Asl til:|Tarjima tili:/);
   assert.doesNotMatch(sent.body.text, /Привет, мир.*Ö|Привет, мир.*Ğ/);
 });
 
