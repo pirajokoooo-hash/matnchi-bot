@@ -35,7 +35,7 @@ NAME_RULES.unshift(
 const SUFFIX = "(?:larining|laridan|lariga|larining|ning|dagi|gacha|lardan|larga|lari|lar|dan|ga|da|ni|ning|si|siga|sini|im|imiz|i)?";
 
 function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\"\\\\$&"");
 }
 
 function alternatives(forms) {
