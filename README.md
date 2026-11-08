@@ -1,34 +1,46 @@
 # Matnchi Bot
 
-Telegram bot Cloudflare Workers webhook orqali ishlaydi.
+Matnchi Bot — Telegram uchun Cloudflare Workers webhook boti. Bitta Worker ichida tarjima, imlo tekshiruvi, yangi lotin alifbosi va lotin-kirill o‘girish xizmatlari ishlaydi.
 
-## Ishga tushirish uchun kerakli sozlamalar
+## Xizmatlar
 
-Cloudflare Worker bindings:
-- `USER_STATE_DO` — foydalanuvchi holatini saqlovchi Durable Object
-- `AI` — Cloudflare Workers AI
+- **Tarjima:** o‘zbek, rus, ingliz, arab va turk tillariga Google Translate public endpoint orqali. Tarjima natijasi ortiqcha sarlavhasiz yuboriladi; o‘zbekcha natija yangi lotin alifbosiga moslanadi.
+- **Imlo:** Cloudflare Workers AI (`@cf/qwen/qwen3-30b-a3b-fp8`) orqali o‘zbek, rus, ingliz, turk va arab matnlari.
+- **Yozuv o‘girish:** lotin → kirill va kirill → yangi o‘zbek lotin yozuvi.
+- **Obunachilar:** foydalanuvchi holati va obunachilar ro‘yxati Durable Object storage’da saqlanadi.
 
-Cloudflare secrets:
+## Cloudflare sozlamalari
+
+`wrangler.toml` ichidagi bindinglar:
+- `AI` — Workers AI binding.
+- `USER_STATE_DO` — `UserState` Durable Object binding.
+
+Cloudflare Worker secrets:
 - `TELEGRAM_BOT_TOKEN`
 - `WEBHOOK_SECRET`
 - `SETUP_SECRET`
 
-GitHub Actions secret:
+GitHub Actions repository secret:
 - `CLOUDFLARE_API_TOKEN`
 
-`wrangler.toml` ichida Worker nomi va KV namespace ID saqlanadi. Maxfiy tokenlarni repozitoriyga yozmang.
+`CLOUDFLARE_ACCOUNT_ID` deploy workflow ichida sozlangan. Token yoki boshqa maxfiy qiymatlarni GitHub kodiga yozmang.
 
-## Joylash
+## Webhookni ulash
 
-`main` tarmog‘iga o‘zgarish yuborilganda GitHub Actions:
-1. JavaScript sintaksisini tekshiradi.
-2. Wrangler dry-run bajaradi.
-3. Worker'ni Cloudflare'ga joylaydi.
+Worker joylangandan keyin bir marta quyidagi manzilni oching:
 
-Webhookni birinchi marta ulash yoki qayta ulash uchun Worker manzilidagi `/register?key=SETUP_SECRET` yo‘li ishlatiladi.
+`https://matnchi-bot.pirajokoooo.workers.dev/register?key=SETUP_SECRET`
 
-## Bot xizmatlari
+`SETUP_SECRET` o‘rniga Cloudflare’da saqlangan haqiqiy maxfiy qiymat ishlatiladi. Uni hech kimga yubormang.
 
-- Tarjima: Cloudflare Workers AI; zarur holatda Google Translate va MyMemory zaxira yo‘llari.
-- Lotin ↔ Kirill: Worker ichidagi o‘zgartirish funksiyalari.
-- Imlo tekshirish: o‘zbekcha, ruscha, inglizcha, turkcha va arabcha matnlar.
+## Tekshirish va joylash
+
+Lokal tekshiruv:
+- `npm install`
+- `npm run verify`
+
+`main` yoki `master` tarmog‘iga o‘zgarish yuborilganda GitHub Actions sintaksisni tekshiradi, testlarni bajaradi va shundan keyingina Worker’ni Cloudflare’ga joylaydi.
+
+## Muhim eslatma
+
+Tarjima Google Translate’ning ommaviy endpointiga bog‘liq; u rasmiy API kafolatlari yoki doimiy ishlash kafolatiga ega emas. Tarjima sifati va imlo natijalarini Telegram’da haqiqiy matnlar bilan alohida sinash kerak.
