@@ -8,21 +8,59 @@ async function showSubscribers(env,chat){const data=await getSubscribers(env);co
 const MAIN={inline_keyboard:[[{text:"🇺🇿 O‘zbekcha",callback_data:"lang_uz"},{text:"🇷🇺 Русский",callback_data:"lang_ru"}],[{text:"🇬🇧 Ingliz tili",callback_data:"lang_en"},{text:"🇸🇦 العربية",callback_data:"lang_ar"}],[{text:"🇹🇷 Türkçe",callback_data:"lang_tr"}],[{text:"🔤 Lotin ↔ Kirill",callback_data:"mode:translit"}],[{text:"✍️ Imlo tuzatish",callback_data:"mode:spell"}]]};
 const LANG={inline_keyboard:[[{text:"🇺🇿 O‘zbekcha",callback_data:"lang_uz"},{text:"🇷🇺 Русский",callback_data:"lang_ru"}],[{text:"🇬🇧 Ingliz tili",callback_data:"lang_en"},{text:"🇸🇦 العربية",callback_data:"lang_ar"}],[{text:"🇹🇷 Türkçe",callback_data:"lang_tr"},{text:"⬅️ Menyuga qaytish",callback_data:"home"}]]};
 const LANGUAGES={uz:"Özbekça",ru:"Русский",en:"Ingliz tili",ar:"العربية",tr:"Türkçe"};
-async function translateGoogle(text,target){
- const chunks=[];let remaining=String(text);while(remaining.length>850){let cut=remaining.lastIndexOf("\n",850);if(cut<425)cut=Math.max(remaining.lastIndexOf(". ",850),remaining.lastIndexOf("? ",850),remaining.lastIndexOf("! ",850));if(cut<425)cut=remaining.lastIndexOf(" ",850);if(cut<1)cut=850;else if(remaining[cut]===" "||remaining[cut]==="\n")cut++;chunks.push(remaining.slice(0,cut));remaining=remaining.slice(cut);}if(remaining)chunks.push(remaining);
- let detected="auto";const translated=[];
- for(const chunk of chunks){
-  const url=new URL("https://translate.googleapis.com/translate_a/single");
-  for(const [k,v] of Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:chunk}))url.searchParams.set(k,v);
-  const response=await fetch(url.toString(),{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});
-  if(!response.ok)throw new Error("Tarjima xizmati vaqtincha ishlamayapti");
-  const data=await response.json();
-  const part=Array.isArray(data?.[0])?data[0].filter(x=>x&&typeof x[0]==="string").map(x=>x[0]).join(""):"";
-  if(!part)throw new Error("Tarjima javobi bo‘sh");
-  if(detected==="auto"&&typeof data?.[2]==="string")detected=data[2].toLowerCase();
-  translated.push(part);
+async function translateGoogle(env,text,target){
+ const languageNames={uz:"Uzbek",ru:"Russian",en:"English",ar:"Arabic",tr:"Turkish"};
+ const targetName=languageNames[target];
+ if(!targetName)throw new Error("Tarjima tili noto‘g‘ri");
+ const chunks=[];let remaining=String(text);
+ while(remaining.length>850){let cut=remaining.lastIndexOf("\n",850);if(cut<425)cut=Math.max(remaining.lastIndexOf(". ",850),remaining.lastIndexOf("? ",850),remaining.lastIndexOf("! ",850));if(cut<425)cut=remaining.lastIndexOf(" ",850);if(cut<1)cut=850;else if(remaining[cut]===" "||remaining[cut]==="\n")cut++;chunks.push(remaining.slice(0,cut));remaining=remaining.slice(cut);}
+ if(remaining)chunks.push(remaining);
+ try{
+  let detected="auto";const translated=[];
+  for(const chunk of chunks){
+   const url=new URL("https://translate.googleapis.com/translate_a/single");
+   for(const [k,v] of Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:chunk}))url.searchParams.set(k,v);
+   const response=await fetch(url.toString(),{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});
+   if(!response.ok)throw new Error("Google Translate HTTP "+response.status);
+   const data=await response.json();
+   const part=Array.isArray(data?.[0])?data[0].filter(x=>x&&typeof x[0]==="string").map(x=>x[0]).join(""):"";
+   if(!part)throw new Error("Google Translate returned an empty result");
+   if(detected==="auto"&&typeof data?.[2]==="string")detected=data[2].toLowerCase();
+   translated.push(part);
+  }
+  return {text:translated.join(""),source:detected,provider:"google"};
+ }catch(googleError){
+  console.warn("GOOGLE_TRANSLATE_FAILED",String(googleError&&googleError.message||googleError));
  }
- return {text:translated.join(""),source:detected};
+ if(!env.AI)throw new Error("Tarjima xizmati vaqtincha ishlamayapti");
+ let timer;
+ try{
+  const result=await Promise.race([
+   env.AI.run("@cf/qwen/qwen3-30b-a3b-fp8",{
+    messages:[
+     {role:"system",content:"You are a professional human translator. Translate the user's entire text faithfully into "+targetName+". Preserve all facts, names, place names, numbers, paragraph breaks, tone and meaning. Do not summarize, explain, transliterate names, add information, repeat sentences or omit anything. Use natural, grammatically correct "+targetName+". Return only the translation, with no heading or commentary."},
+     {role:"user",content:"Translate the complete text into "+targetName+". Preserve names such as Xusan, Hilola and Jahongir exactly as written.\n\n"+String(text)}
+    ],
+    max_tokens:Math.min(3000,Math.max(400,Math.ceil(String(text).length*1.15))),
+    temperature:0,
+    seed:31
+   }),
+   new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("AI tarjima 20 soniyada javob bermadi")),20000);})
+  ]);
+  let output=String(result?.response||result?.choices?.[0]?.message?.content||result?.choices?.[0]?.text||result?.result?.response||result?.result?.choices?.[0]?.message?.content||result?.output_text||result?.generated_text||"").trim();
+  const thinkEnd=output.lastIndexOf("</think>");
+  if(output.startsWith("<think>")&&thinkEnd>=0)output=output.slice(thinkEnd+8).trim();
+  output=output.replace(/^["“”]|["“”]$/g,"").trim();
+  const inputWords=String(text).match(/[\p{L}\p{M}]+/gu)||[];
+  const outputWords=output.match(/[\p{L}\p{M}]+/gu)||[];
+  if(!output||output.length<Math.max(3,String(text).length*0.2)||output.length>String(text).length*2.5||outputWords.length<Math.max(1,inputWords.length*0.2)){
+   throw new Error("AI tarjima natijasi to‘liq emas");
+  }
+  return {text:output,source:"auto",provider:"cloudflare-ai"};
+ }catch(aiError){
+  console.error("AI_TRANSLATE_FAILED",String(aiError&&aiError.stack||aiError));
+  throw new Error("Tarjima xizmatlari vaqtincha javob bermayapti. Birozdan keyin qayta urinib ko‘ring.");
+ }finally{clearTimeout(timer);}
 }
 export function splitTelegramText(value,maxLength=3900){
   const text=String(value);
@@ -305,7 +343,7 @@ async function spell(env,text){
   if(isUzbekText(text))return await spellUzbek(env,text);
   return await spellOther(env,text);
 }
-async function handleMessage(env,msg){if(!msg||!msg.from||!msg.chat)return;const id=msg.from.id,chat=msg.chat.id,t=(msg.text||"").trim();await recordSubscriber(env,msg.from);if(t==="/users"){if(String(id)!==ADMIN_ID){await send(env,chat,"Bu buyruq faqat admin uchun.");return;}await showSubscribers(env,chat);return;}if(t==="/start"||t==="/help"){await stateSet(env,id,{});await send(env,chat,t==="/help"?"Xizmatlar:\n🌐 O‘zbekcha, ruscha, inglizcha, turkcha va arabcha tarjima\n🔤 Lotin ↔ Kirill\n✍️ O‘zbekcha, ruscha, inglizcha, turkcha va arabcha imlo tekshiruvi\n\n/start — asosiy menyu\n/cancel — amalni bekor qiliş":"Assalomu alaykum! Men Matnchi Botman.\nTarjima tilini yoki boshqa xizmatni tanlang:",MAIN);return;}if(t==="/cancel"){await stateSet(env,id,{});await send(env,chat,"Amal bekor qilindi.",MAIN);return;}const s=await stateGet(env,id);if(!t){await send(env,chat,"Iltimos, matn yuboring yoki /start ni bosing.",MAIN);return;}if(t.length>4500){await send(env,chat,"Matn juda uzun. 4500 belgidan qisqaroq matn yuboring.");return;}if(!s.mode){await send(env,chat,"Avval menyudan xizmatni tanlang:",MAIN);return;}const progress=await send(env,chat,s.mode==="translate"?"⏳ Tarjima qilinmoqda...":"⏳ Matn tekshirilmoqda...",null);try{let result;if(s.mode==="translate"){const translated=await translateGoogle(t,s.lang||"uz");result=translated.text;}else if(s.mode==="new_lc"){result=latinToCyrillic(t);}else if(s.mode==="new_cl"){result=cyrillicToLatin(t);}else if(s.mode==="spell"){const x=await spell(env,t);result=x.corrected+"\n\n"+x.note;}else{await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:"Amalni tanlashda xatolik. /start ni bosing.",reply_markup:MAIN});return;}const useNewAlphabet=(s.mode==="spell"&&isUzbekText(t))||(s.mode==="translate"&&(s.lang||"uz")==="uz")||s.mode==="new_cl";const outgoing=useNewAlphabet?toNewAlphabet(result):result;const parts=splitTelegramText(outgoing);await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:parts[0],...(parts.length===1?{reply_markup:BACK}:{})},false);for(let i=1;i<parts.length;i++){await send(env,chat,parts[i],i===parts.length-1?BACK:null,false);}}catch(e){console.error("MATNCHI_SERVICE_ERROR",e&&e.stack||e);const detail=String(e&&e.message||"Noma’lum xatolik").slice(0,180);await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:"Xizmatda xatolik: "+detail+"\n\nBirozdan keyin qayta urinib ko‘ring.",reply_markup:BACK});}}
+async function handleMessage(env,msg){if(!msg||!msg.from||!msg.chat)return;const id=msg.from.id,chat=msg.chat.id,t=(msg.text||"").trim();await recordSubscriber(env,msg.from);if(t==="/users"){if(String(id)!==ADMIN_ID){await send(env,chat,"Bu buyruq faqat admin uchun.");return;}await showSubscribers(env,chat);return;}if(t==="/start"||t==="/help"){await stateSet(env,id,{});await send(env,chat,t==="/help"?"Xizmatlar:\n🌐 O‘zbekcha, ruscha, inglizcha, turkcha va arabcha tarjima\n🔤 Lotin ↔ Kirill\n✍️ O‘zbekcha, ruscha, inglizcha, turkcha va arabcha imlo tekshiruvi\n\n/start — asosiy menyu\n/cancel — amalni bekor qiliş":"Assalomu alaykum! Men Matnchi Botman.\nTarjima tilini yoki boshqa xizmatni tanlang:",MAIN);return;}if(t==="/cancel"){await stateSet(env,id,{});await send(env,chat,"Amal bekor qilindi.",MAIN);return;}const s=await stateGet(env,id);if(!t){await send(env,chat,"Iltimos, matn yuboring yoki /start ni bosing.",MAIN);return;}if(t.length>4500){await send(env,chat,"Matn juda uzun. 4500 belgidan qisqaroq matn yuboring.");return;}if(!s.mode){await send(env,chat,"Avval menyudan xizmatni tanlang:",MAIN);return;}const progress=await send(env,chat,s.mode==="translate"?"⏳ Tarjima qilinmoqda...":"⏳ Matn tekshirilmoqda...",null);try{let result;if(s.mode==="translate"){const translated=await translateGoogle(env,t,s.lang||"uz");result=translated.text;}else if(s.mode==="new_lc"){result=latinToCyrillic(t);}else if(s.mode==="new_cl"){result=cyrillicToLatin(t);}else if(s.mode==="spell"){const x=await spell(env,t);result=x.corrected+"\n\n"+x.note;}else{await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:"Amalni tanlashda xatolik. /start ni bosing.",reply_markup:MAIN});return;}const useNewAlphabet=(s.mode==="spell"&&isUzbekText(t))||(s.mode==="translate"&&(s.lang||"uz")==="uz")||s.mode==="new_cl";const outgoing=useNewAlphabet?toNewAlphabet(result):result;const parts=splitTelegramText(outgoing);await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:parts[0],...(parts.length===1?{reply_markup:BACK}:{})},false);for(let i=1;i<parts.length;i++){await send(env,chat,parts[i],i===parts.length-1?BACK:null,false);}}catch(e){console.error("MATNCHI_SERVICE_ERROR",e&&e.stack||e);const detail=String(e&&e.message||"Noma’lum xatolik").slice(0,180);await tg(env,"editMessageText",{chat_id:chat,message_id:progress.message_id,text:"Xizmatda xatolik: "+detail+"\n\nBirozdan keyin qayta urinib ko‘ring.",reply_markup:BACK});}}
 async function handleCallback(env,q){const id=q.from.id,chat=q.message.chat.id,d=q.data||"";await recordSubscriber(env,q.from);let s=await stateGet(env,id);try{if(d==="home"){await stateSet(env,id,{});await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"Kerakli xizmatni tanlang:",reply_markup:MAIN});}else if(d==="mode:translate"){await stateSet(env,id,{mode:"choose_translate"});await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"Tarjima qilinadigan tilni tanlang:",reply_markup:LANG});}else if(d.startsWith("lang_")){const target=d.slice(5);if(!LANGUAGES[target])throw new Error("Tarjima tili noto‘g‘ri");await stateSet(env,id,{mode:"translate",lang:target});await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"✅ Maqsadli til tanlandi: "+LANGUAGES[target]+"\n\nEndi tarjima qilinadigan matnni yuboring.\nTilni o‘zgartirish uchun /start ni bosing.",reply_markup:BACK});}else if(d==="mode:translit"){await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"Qaysi yoʼnalishda özgartiray?",reply_markup:DIRS});}else if(d.startsWith("translit:")){s={mode:d.split(":")[1]};await stateSet(env,id,s);await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"Özgartiriladigan matnni yuboring.",reply_markup:BACK});}else if(d==="mode:spell"){s={mode:"spell"};await stateSet(env,id,s);await tg(env,"editMessageText",{chat_id:chat,message_id:q.message.message_id,text:"Imlosini tekshirish uchun o‘zbekcha, ruscha, inglizcha, turkcha yoki arabcha matnni yuboring.",reply_markup:BACK});}await tg(env,"answerCallbackQuery",{callback_query_id:q.id});}catch(e){console.error(e);}}
 export class UserState {constructor(ctx,env){this.ctx=ctx;}async fetch(request){const url=new URL(request.url);if(url.pathname==="/get"&&request.method==="GET"){const value=await this.ctx.storage.get("state")||{};return Response.json(value);}if(url.pathname==="/set"&&request.method==="POST"){const value=await request.json();await this.ctx.storage.put("state",value);return new Response("OK");}if(url.pathname==="/record"&&request.method==="POST"){const value=await request.json();const users=await this.ctx.storage.get("users")||{};const id=String(value.id);const old=users[id]||{};users[id]={...old,...value,first_seen:old.first_seen||value.seen_at,last_seen:value.seen_at};await this.ctx.storage.put("users",users);return new Response("OK");}if(url.pathname==="/users"&&request.method==="GET"){const users=Object.values(await this.ctx.storage.get("users")||{});return Response.json({total:users.length,users});}return new Response("Not found",{status:404});}}
 export default{async fetch(request,env,ctx){const u=new URL(request.url);if(u.pathname==="/register"){if(!env.SETUP_SECRET||u.searchParams.get("key")!==env.SETUP_SECRET)return new Response("Ruxsat yo‘q",{status:403});const hook=new URL("/telegram",request.url).toString();const r=await tg(env,"setWebhook",{url:hook,secret_token:env.WEBHOOK_SECRET,allowed_updates:["message","callback_query"],drop_pending_updates:true});return new Response(JSON.stringify({ok:true,result:r}),{headers:{"content-type":"application/json"}});}if(u.pathname!=="/telegram"||request.method!=="POST")return new Response("Matnchi Bot ishlayapti",{status:200});if(request.headers.get("X-Telegram-Bot-Api-Secret-Token")!==env.WEBHOOK_SECRET)return new Response("Unauthorized",{status:401});let update;try{update=await request.json();}catch{return new Response("Bad Request",{status:400});}if(update.callback_query)await handleCallback(env,update.callback_query);else if(update.message)await handleMessage(env,update.message).catch(e=>console.error("MESSAGE_HANDLER_FAILED",e&&e.stack||e));return new Response("OK");}};
