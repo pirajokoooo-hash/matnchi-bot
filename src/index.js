@@ -29,10 +29,10 @@ export function splitTelegramText(value,maxLength=3900){
   const parts=[];
   let rest=text;
   while(rest.length>maxLength){
-    let cut=rest.lastIndexOf("\n",maxLength);
+    let cut=rest.lastIndexOf("\n",maxLength-1);
     if(cut>=Math.floor(maxLength*0.55))cut+=1;
     else{
-      cut=rest.lastIndexOf(" ",maxLength);
+      cut=rest.lastIndexOf(" ",maxLength-1);
       if(cut>=Math.floor(maxLength*0.55))cut+=1;
       else cut=maxLength;
     }
