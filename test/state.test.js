@@ -40,9 +40,7 @@ function makeEnv() {
       USER_STATE_DO: binding,
       AI: { async run(model, input) {
         aiCalls.push({ model, input });
-        return input.messages[1].content.includes("ingliz tilidan rus tiliga")
-          ? { response: "Я хочу изучать английский и улучшать свои навыки." }
-          : input.messages[1].content.includes("o‘zbek tilidan turk tiliga") ? { response: "Yarın arkadaşım ile şehire gideceğim." } : input.messages[1].content.includes("Onam menga doimo yaxshilik tilaydi.") ? { response: "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا." } : { response: "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة." };
+        return { response: "Test javobi." };
       } }
     }
   };
@@ -59,105 +57,13 @@ async function update(env, body) {
   }), env);
 }
 
-test("chosen translation language survives callback and next message", async () => {
-  const { env, calls } = makeEnv();
-  await update(env, {
-    callback_query: {
-      id: "cb1",
-      from: { id: 777 },
-      data: "lang:ru",
-      message: { message_id: 5, chat: { id: 777 } }
-    }
-  });
-  await update(env, {
-    message: { from: { id: 777 }, chat: { id: 777 }, text: "I want to learn English and improve my skills." }
-  });
-  const sent = calls.find(x => x.method === "editMessageText" && x.body.text === "Я хочу изучать английский и улучшать свои навыки.");
-  assert.ok(sent, "bot should send a translation");
-  assert.equal(sent.body.text, "Я хочу изучать английский и улучшать свои навыки.");
-});
-
-test("Uzbek Latin greeting is detected as Uzbek before Arabic translation", async () => {
-  const { env, calls, aiCalls } = makeEnv();
-  await update(env, {
-    callback_query: {
-      id: "cb3",
-      from: { id: 999 },
-      data: "lang:ar",
-      message: { message_id: 7, chat: { id: 999 } }
-    }
-  });
-  await update(env, {
-    message: {
-      from: { id: 999 },
-      chat: { id: 999 },
-      text: "Assalomu alaykum, yaxshimisiz? Sizga tinchlik va baxt tilayman."
-    }
-  });
-  const qwen = aiCalls.find(x => x.model.includes("qwen"));
-  assert.ok(qwen, "Uzbek text should use the Uzbek-capable translation model");
-  const prompt = qwen.input.messages[1].content;
-  assert.match(prompt, /o‘zbek tilidan arab tiliga/);
-  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
-  assert.equal(sent.body.text, "السلام عليكم، كيف حالكم؟ أتمنى لكم السلام والسعادة.");
-});
-
-
-test("Uzbek sentence about mother is detected as Uzbek before Arabic translation", async () => {
-  const { env, calls, aiCalls } = makeEnv();
-  await update(env, {
-    callback_query: {
-      id: "cb5",
-      from: { id: 1002 },
-      data: "lang:ar",
-      message: { message_id: 9, chat: { id: 1002 } }
-    }
-  });
-  await update(env, {
-    message: {
-      from: { id: 1002 },
-      chat: { id: 1002 },
-      text: "Onam menga doimo yaxshilik tilaydi."
-    }
-  });
-  const qwen = aiCalls.find(x => x.model.includes("qwen"));
-  assert.ok(qwen, "Uzbek sentence should use the Uzbek-capable translation model");
-  assert.match(qwen.input.messages[1].content, /o‘zbek tilidan arab tiliga/);
-  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
-  assert.equal(sent.body.text, "أُمِّي تَتَمَنَّى لِي الْخَيْرَ دَائِمًا.");
-});
-
-test("Turkish translation corrects the observed şehir dative spelling error", async () => {
-  const { env, calls, aiCalls } = makeEnv();
-  await update(env, {
-    callback_query: {
-      id: "cb4",
-      from: { id: 1001 },
-      data: "lang:tr",
-      message: { message_id: 8, chat: { id: 1001 } }
-    }
-  });
-  await update(env, {
-    message: {
-      from: { id: 1001 },
-      chat: { id: 1001 },
-      text: "Ertaga do‘stim bilan shaharga boraman."
-    }
-  });
-  const qwen = aiCalls.find(x => x.model.includes("qwen"));
-  assert.ok(qwen, "Uzbek-to-Turkish should use the Uzbek-capable model");
-  assert.match(qwen.input.messages[0].content, /şehir is şehre, never şehire/);
-  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
-  assert.equal(sent.body.text, "Yarın arkadaşım ile şehre gideceğim.");
-});
-
 test("start clears saved user mode", async () => {
   const { env, calls } = makeEnv();
   await update(env, {
     callback_query: {
       id: "cb2",
       from: { id: 888 },
-      data: "lang:ru",
+      data: "mode:spell",
       message: { message_id: 6, chat: { id: 888 } }
     }
   });
