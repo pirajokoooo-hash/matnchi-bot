@@ -35,17 +35,16 @@ NAME_RULES.unshift(
 const SUFFIX = "(?:larining|laridan|lariga|larining|ning|dagi|gacha|lardan|larga|lari|lar|dan|ga|da|ni|ning|si|siga|sini|im|imiz|i)?";
 
 function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\"\\\\$&"");
+  return value;
 }
 
 function alternatives(forms) {
   return forms
     .slice()
     .sort((a, b) => b.length - a.length)
-    .map(form => form.trim().split(/\\s+/).map(escapeRegex).join("\\s+"))
+    .map(form => form.trim().split(/\s+/).map(escapeRegex).join("\\s+"))
     .join("|");
 }
-
 function namePattern(forms, withSuffix = true) {
   return new RegExp(
     "(^|[^\\p{L}])(" + alternatives(forms) + ")" +
