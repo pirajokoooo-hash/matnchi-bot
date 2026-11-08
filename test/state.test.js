@@ -29,6 +29,12 @@ function makeEnv() {
       calls.push({ method, body });
       return Response.json({ ok: true, result: { message_id: 10 } });
     }
+    if (u.includes("translate.googleapis.com")) {
+      const parsed = new URL(u);
+      const target = parsed.searchParams.get("tl");
+      const translated = target === "ru" ? "Привет, мир!" : target === "ar" ? "مرحبا بالعالم!" : target === "tr" ? "Merhaba dünya!" : target === "en" ? "Hello, world!" : "Salom, dunyo!";
+      return Response.json([[[translated, parsed.searchParams.get("q"), null, null]], null, "en"]);
+    }
     throw new Error("Unexpected fetch: " + u);
   };
   return {
@@ -377,3 +383,31 @@ test("Uzbek proofreading makes one model request and refuses an empty response",
   assert.doesNotMatch(sent.body.text, /Imlo tekşirildi/);
   assert.match(sent.body.text, /bo‘sh javob|Xizmatda xatolik/);
 });
+
+test("translation menu selects target language and returns untranslated-script output", async () => {
+  const { env, calls } = makeEnv();
+  await update(env, {
+    callback_query: {
+      id: "tr-menu", from: { id: 4001 }, data: "mode:translate",
+      message: { message_id: 41, chat: { id: 4001 } }
+    }
+  });
+  const menu = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(menu.body.text, /Tarjima qilinadigan tilni tanlang/);
+  assert.equal(menu.body.reply_markup.inline_keyboard[0][0].callback_data, "lang_uz");
+  await update(env, {
+    callback_query: {
+      id: "tr-lang", from: { id: 4001 }, data: "lang_ru",
+      message: { message_id: 41, chat: { id: 4001 } }
+    }
+  });
+  await update(env, {
+    message: { from: { id: 4001 }, chat: { id: 4001 }, text: "Hello, world!" }
+  });
+  const sent = calls.filter(x => x.method === "editMessageText").at(-1);
+  assert.match(sent.body.text, /Привет, мир!/);
+  assert.match(sent.body.text, /Asl til: English/);
+  assert.match(sent.body.text, /Tarjima tili: Русский/);
+  assert.doesNotMatch(sent.body.text, /Привет, мир.*Ö|Привет, мир.*Ğ/);
+});
+
