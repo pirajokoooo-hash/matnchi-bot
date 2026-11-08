@@ -9,7 +9,7 @@ const MAIN={inline_keyboard:[[{text:"🌐 Tarjima",callback_data:"mode:translate
 const LANG={inline_keyboard:[[{text:"🇺🇿 O‘zbekcha",callback_data:"lang_uz"},{text:"🇷🇺 Русский",callback_data:"lang_ru"}],[{text:"🇬🇧 English",callback_data:"lang_en"},{text:"🇸🇦 العربية",callback_data:"lang_ar"}],[{text:"🇹🇷 Türkçe",callback_data:"lang_tr"},{text:"⬅️ Menyuga qaytish",callback_data:"home"}]]};
 const LANGUAGES={uz:"O‘zbekcha",ru:"Русский",en:"English",ar:"العربية",tr:"Türkçe"};
 async function translateGoogle(text,target){
- const chunks=[];const chars=Array.from(String(text));for(let i=0;i<chars.length;i+=850)chunks.push(chars.slice(i,i+850).join(""));
+ const chunks=[];let remaining=String(text);while(remaining.length>850){let cut=remaining.lastIndexOf("\n",850);if(cut<425)cut=Math.max(remaining.lastIndexOf(". ",850),remaining.lastIndexOf("? ",850),remaining.lastIndexOf("! ",850));if(cut<425)cut=remaining.lastIndexOf(" ",850);if(cut<1)cut=850;else if(remaining[cut]===" "||remaining[cut]==="\\n")cut++;chunks.push(remaining.slice(0,cut));remaining=remaining.slice(cut);}if(remaining)chunks.push(remaining);
  let detected="auto";const translated=[];
  for(const chunk of chunks){
   const url=new URL("https://translate.googleapis.com/translate_a/single");
@@ -26,8 +26,6 @@ async function translateGoogle(text,target){
 }
 const BACK={inline_keyboard:[[{text:"⬅️ Menyuga qaytiş",callback_data:"home"}]]};
 const DIRS={inline_keyboard:[[{text:"Yangi lotin → Kirill",callback_data:"translit:new_lc"}],[{text:"Kirill → Yangi lotin",callback_data:"translit:new_cl"}],[{text:"⬅️ Menyuga qaytiş",callback_data:"home"}]]};
-const LANG={inline_keyboard:[[{text:"🇺🇿 O‘zbekcha",callback_data:"lang_uz"},{text:"🇷🇺 Русский",callback_data:"lang_ru"}],[{text:"🇬🇧 English",callback_data:"lang_en"},{text:"🇸🇦 العربية",callback_data:"lang_ar"}],[{text:"🇹🇷 Türkçe",callback_data:"lang_tr"},{text:"⬅️ Menyuga qaytish",callback_data:"home"}]]};
-const LANGUAGES={uz:"O‘zbekcha",ru:"Русский",en:"English",ar:"العربية",tr:"Türkçe"};
 async function translateGoogle(text,target){
  const chunks=[];const chars=Array.from(String(text));for(let i=0;i<chars.length;i+=850)chunks.push(chars.slice(i,i+850).join(""));
  let detected="auto";const translated=[];
