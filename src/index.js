@@ -26,22 +26,6 @@ async function translateGoogle(text,target){
 }
 const BACK={inline_keyboard:[[{text:"⬅️ Menyuga qaytiş",callback_data:"home"}]]};
 const DIRS={inline_keyboard:[[{text:"Yangi lotin → Kirill",callback_data:"translit:new_lc"}],[{text:"Kirill → Yangi lotin",callback_data:"translit:new_cl"}],[{text:"⬅️ Menyuga qaytiş",callback_data:"home"}]]};
-async function translateGoogle(text,target){
- const chunks=[];const chars=Array.from(String(text));for(let i=0;i<chars.length;i+=850)chunks.push(chars.slice(i,i+850).join(""));
- let detected="auto";const translated=[];
- for(const chunk of chunks){
-  const url=new URL("https://translate.googleapis.com/translate_a/single");
-  for(const [k,v] of Object.entries({client:"gtx",sl:"auto",tl:target,dt:"t",q:chunk}))url.searchParams.set(k,v);
-  const response=await fetch(url.toString(),{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});
-  if(!response.ok)throw new Error("Tarjima xizmati vaqtincha ishlamayapti");
-  const data=await response.json();
-  const part=Array.isArray(data?.[0])?data[0].filter(x=>x&&typeof x[0]==="string").map(x=>x[0]).join(""):"";
-  if(!part)throw new Error("Tarjima javobi bo‘sh");
-  if(detected==="auto"&&typeof data?.[2]==="string")detected=data[2].toLowerCase();
-  translated.push(part);
- }
- return {text:translated.join(""),source:detected};
-}
 function toNewAlphabet(text){return String(text).replace(/[oO][ʻ‘’ʼ']/g, m=>m[0]==="O"?"Ö":"ö").replace(/[gG][ʻ‘’ʼ']/g,m=>m[0]==="G"?"Ğ":"ğ").replace(/sh/gi,m=>m===m.toUpperCase()?"Ş":m[0]===m[0].toUpperCase()?"Ş":"ş").replace(/ch/gi,m=>m===m.toUpperCase()?"Ç":m[0]===m[0].toUpperCase()?"Ç":"ç");}
 async function tg(env,method,body,newAlphabet=true){if(newAlphabet){if(typeof body.text==="string")body={...body,text:toNewAlphabet(body.text)};if(body.reply_markup?.inline_keyboard)body={...body,reply_markup:{...body.reply_markup,inline_keyboard:body.reply_markup.inline_keyboard.map(row=>row.map(b=>b.text?{...b,text:toNewAlphabet(b.text)}:b))}};}const token=env.TELEGRAM_BOT_TOKEN||env.BOT_TOKEN;if(!token)throw new Error("Telegram token sozlanmagan");const r=await fetch(API+token+"/"+method,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!d.ok)throw new Error(d.description||"Telegram API xatosi");return d.result;}
 async function send(env,chatId,text,keyboard,newAlphabet=true){const b={chat_id:chatId,text};if(keyboard)b.reply_markup=keyboard;return tg(env,"sendMessage",b,newAlphabet);}
